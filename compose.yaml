@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: 'postgres:14.17'
+    environment:
+      - 'POSTGRES_DB=recruitment_data'
+      - 'POSTGRES_PASSWORD=Thang#2006'
+      - 'POSTGRES_USER=thanglm2006'
+    ports:
+      - '5432'
