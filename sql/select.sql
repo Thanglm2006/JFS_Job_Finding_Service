@@ -1,1 +1,1 @@
-select * from job_post;
+drop table job;

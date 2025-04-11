@@ -75,13 +75,28 @@ public class UserService {
         response.put("message", "Bạn đã đăng kí tài khoản thành công!");
         return ResponseEntity.ok(response);
     }
-    public String EmployerLogin(String email, String password) {
+    public ResponseEntity<?> EmployerLogin(String email, String password) {
         Optional<User> user = userRepository.findByEmail(email);
-        if(user.isEmpty()||employerRepository.findByUser(user.get()).isEmpty()){throw new RuntimeException("Tài khoản không tồn tại!");}
-        if(!passwordEncoder.matches(password,user.get().getPassword())){throw new RuntimeException("Sai mật khẩu!");}
+        if(user.isEmpty()||employerRepository.findByUser(user.get()).isEmpty()){
+            Map<String, Object> response = new HashMap<>();
+            response.put("error", "User does not exist");
+            response.put("message", "Tài khoản không tồn tại!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        if(!passwordEncoder.matches(password,user.get().getPassword())){
+            Map<String, Object> response = new HashMap<>();
+            response.put("error", "Invalid password");
+            response.put("message", "Sai mật khẩu!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
         Optional<Employer> u=employerRepository.findByUser(user.get());
         System.out.println(u.get().getId());
-        return jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
+        String token=jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("token", token);
+        response.put("user", user.get());
+        return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Map<String, Object> resume) {
 
@@ -121,13 +136,38 @@ public class UserService {
         response.put("message", "Bạn đã đăng kí tài khoản thành công!");
         return ResponseEntity.ok(response);
     }
-    public String ApplicantLogin(String email, String password) {
+    public ResponseEntity<?> ApplicantLogin(String email, String password) {
         Optional<User> user = userRepository.findByEmail(email);
-        if(user.isEmpty()||applicantRepository.findByUser(user.get()).isEmpty()){throw new RuntimeException("Tài khoản không tồn tại!");}
-        if(!passwordEncoder.matches(password,user.get().getPassword())){throw new RuntimeException("Sai mật khẩu!");}
+        if(user.isEmpty()||applicantRepository.findByUser(user.get()).isEmpty()){
+            Map<String, Object> response = new HashMap<>();
+            response.put("error", "User does not exist");
+            response.put("message", "Tài khoản không tồn tại!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        if(!passwordEncoder.matches(password,user.get().getPassword())){
+            Map<String, Object> response = new HashMap<>();
+            response.put("error", "Invalid password");
+            response.put("message", "Sai mật khẩu!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
         Optional<Applicant> u=applicantRepository.findByUser(user.get());
         System.out.println(u.get().getId()+"\n"+u.get().getResume());
-        return jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
+        String token=jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("token", token);
+        response.put("user", user.get());
+        return ResponseEntity.ok(response);
+    }
+    public ResponseEntity<?> checkEmail(String email) {
+        Map<String, Object> response = new HashMap<>();
+        if(userRepository.findByEmail(email).isPresent()){
+            response.put("error", "Duplicate email");
+            response.put("message", "Email này đã được sử dụng bởi một tài khoản khác!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        response.put("status", "success");
+        return ResponseEntity.ok(response);
     }
     public String updatePassword(String email, String oldPass, String password, String confirmPass) {
         Optional<User> user = userRepository.findByEmail(email);
@@ -174,6 +214,15 @@ public class UserService {
             return new ResponseEntity<>(response, HttpStatus.OK);
         }
         response.put("result", "deny");
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+    public ResponseEntity<?> isTokenValid(String token, String email) {
+        Map<String, Object> response = new HashMap<>();
+        if(jwtUtil.validateToken(token,email)){
+            response.put("result", "valid");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        response.put("result", "invalid");
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 }

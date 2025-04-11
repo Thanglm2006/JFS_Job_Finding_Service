@@ -4,9 +4,20 @@ import lombok.Getter;
 import lombok.Setter;
 @Getter @Setter
 public class EmployerRegisterRequest {
-    private String email;
-    private String password;
-    private String confirmPassword;
     private String name;
+    private String email;
     private String employerType;
+    private String password;
+    private String retypePass;
+
+    @Override
+    public String toString() {
+        return "EmployerRegisterRequest{" +
+                "name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", employerType='" + employerType + '\'' +
+                ", password='" + password + '\'' +
+                ", retypePass='" + retypePass + '\'' +
+                '}';
+    }
 }

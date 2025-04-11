@@ -10,7 +10,7 @@ import java.util.Map;
 public class ApplicantRegisterRequest {
     private String email;
     private String password;
-    private String confirmPassword;
+    private String retypePass;
     private String name;
     private Map<String, Object> resume;
 }

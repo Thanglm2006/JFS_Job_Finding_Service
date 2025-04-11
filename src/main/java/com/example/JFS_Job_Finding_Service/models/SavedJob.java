@@ -5,6 +5,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "saved_jobs")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Builder
 public class SavedJob {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

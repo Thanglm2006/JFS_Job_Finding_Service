@@ -67,6 +67,11 @@ create table job_post(
     workspace_picture text,
     created_at timestamp not null default now()
 );
+create table image_folders(
+    id serial primary key,
+    folder_name text not null,
+    file_name text not null
+);
 CREATE SEQUENCE job_post_id_seq START 1;
 CREATE FUNCTION generate_job_post_id() RETURNS TRIGGER AS $$
 BEGIN

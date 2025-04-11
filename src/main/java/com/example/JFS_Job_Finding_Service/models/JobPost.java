@@ -28,7 +28,7 @@ public class JobPost {
     @JdbcTypeCode(SqlTypes.JSON)  // ✅ Use correct annotation for JSONB in Hibernate 6
     @Column(columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> description;
-    @Column(nullable = true)
+    @Column(nullable = true, name="workspace_picture")
     private String workspacePicture;
 
     @Column(nullable = false)
