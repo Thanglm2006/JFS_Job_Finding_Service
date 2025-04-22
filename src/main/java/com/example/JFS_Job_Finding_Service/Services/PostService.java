@@ -19,6 +19,7 @@ import java.util.Map;
 public class PostService {
     @Autowired
     private JobPostRepository jobPostRepository;
+
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -39,6 +40,9 @@ public class PostService {
         jobPost.setEmployer(jwtUtil.getEmployer(token));
         jobPost.setDescription(postingRequest.getDescription());
         jobPost.setWorkspacePicture(postingRequest.getWorkSpacePicture());
+        if(jobPost.getWorkspacePicture() != null){
+
+        }
         jobPostRepository.save(jobPost);
         response.put("status", "success");
         response.put("message", "Post added successfully");
