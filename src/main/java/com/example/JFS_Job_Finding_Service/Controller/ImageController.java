@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/images")
-public class ImgurController {
+public class ImageController {
     @Autowired
     private ImgurService imgurService;
 
@@ -40,9 +40,10 @@ public class ImgurController {
     private CloudinaryService cloudinaryService;
 
     @PostMapping("/upload-cloudinary")
-    public ResponseEntity<String> upload(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> upload(@RequestParam("files") MultipartFile[] files,@RequestParam("folder") String folder) {
         try {
-            String url = cloudinaryService.uploadFile(file);
+            String url = cloudinaryService.uploadFiles(files,folder);
+
             return ResponseEntity.ok(url);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Upload failed: " + e.getMessage());

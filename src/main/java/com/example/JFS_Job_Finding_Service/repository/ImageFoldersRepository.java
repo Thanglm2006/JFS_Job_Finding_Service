@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ImageFoldersService extends JpaRepository<ImageFolders, Long> {
+public interface ImageFoldersRepository extends JpaRepository<ImageFolders, Long> {
     ImageFolders findByFolderName(String folderName);
 }

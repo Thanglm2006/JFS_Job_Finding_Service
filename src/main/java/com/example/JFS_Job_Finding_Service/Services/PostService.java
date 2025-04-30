@@ -27,12 +27,12 @@ public class PostService {
         Map<String, Object> response = new HashMap<>();
         if(!jwtUtil.validateToken(token,jwtUtil.extractEmail(token))){
             response.put("status", "fail");
-            response.put("message", "Invalid Token");
+            response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)){
             response.put("status", "fail");
-            response.put("message", "not a employer to post");
+            response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
         JobPost jobPost = new JobPost();
@@ -45,7 +45,7 @@ public class PostService {
         }
         jobPostRepository.save(jobPost);
         response.put("status", "success");
-        response.put("message", "Post added successfully");
+        response.put("message", "Tạo bài đăng thành công");
         response.put("jobPost", jobPost);
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);

@@ -19,4 +19,9 @@ public class ImageFolders {
 
     @Column(nullable = false, name="file_name")
     private String fileName;
+
+    public ImageFolders(String folderName, String fileName) {
+        this.folderName = folderName;
+        this.fileName = fileName;
+    }
 }

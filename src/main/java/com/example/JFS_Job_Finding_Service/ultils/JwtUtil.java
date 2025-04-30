@@ -76,6 +76,7 @@ public class JwtUtil {
     // ✅ Check if Token is Valid
     public boolean validateToken(String token, String userEmail) {
         String trueEmail=extractEmail(token);
+        System.out.println("trueEmail: "+trueEmail);
         return trueEmail.equals(userEmail) && !isTokenExpired(token);
     }
 
