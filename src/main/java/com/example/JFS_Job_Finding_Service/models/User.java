@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.models;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name="users")
@@ -57,5 +58,17 @@ public class User {
         this.password = password;
         this.role = role;
         this.avatarUrl = avatarUrl;
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        return Objects.equals(id, user.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
