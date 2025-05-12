@@ -35,7 +35,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         WebSocketSession recipientSession = sessions.get(recipient);
         if (recipientSession != null && recipientSession.isOpen()) {
             System.out.println("Sending message to " + recipient+ ": " + content);
-
             recipientSession.sendMessage(new TextMessage(getId(session) + ": " + content));
         }
     }
