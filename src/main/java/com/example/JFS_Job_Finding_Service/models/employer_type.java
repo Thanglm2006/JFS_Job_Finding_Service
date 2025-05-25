@@ -1,8 +1,8 @@
 package com.example.JFS_Job_Finding_Service.models;
 
 public enum employer_type {
-    Company , SHOP, RESTAURANT, SUPERMARKET, HOTEL,
-    SCHOOL, HOSPITAL, RECRUITER, GOVERNMENT, NGO,
-    STARTUP, EVENT_ORGANIZER, CONSTRUCTION, TRANSPORTATION,
-    SALON, GYM, FARM, ENTERTAINMENT, E_COMMERCE, INDIVIDUAL, OTHER
+    Company , Shop, Restaurant, Supermarket, Hotel,
+    School, Hospital, Recruiter, Government, NGO,
+    Startup, EventOrganizer, Construction, Transportation,
+    Salon, Gym, Farm, Entertainment, E_commerce, individual, Other
 }

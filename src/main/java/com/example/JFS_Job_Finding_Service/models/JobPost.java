@@ -21,6 +21,7 @@ public class JobPost {
     @Column(nullable = false)
     private String title;
 
+    @Getter
     @ManyToOne
     @JoinColumn(name = "employer_id", referencedColumnName = "id", nullable = false)
     private Employer employer;
@@ -28,7 +29,7 @@ public class JobPost {
     @JdbcTypeCode(SqlTypes.JSON)  // ✅ Use correct annotation for JSONB in Hibernate 6
     @Column(columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> description;
-    @Column(nullable = true)
+    @Column(nullable = true, name="workspace_picture")
     private String workspacePicture;
 
     @Column(nullable = false)
@@ -38,9 +39,7 @@ public class JobPost {
         this.employer = employer;
         this.description = description;
     }
-    public String getEmployer(){
-        return employer.getId();
-    }
+
     public JobPost(String title, Employer employer, Map<String, Object> description, String workspacePicture) {
         this.title = title;
         this.employer = employer;
