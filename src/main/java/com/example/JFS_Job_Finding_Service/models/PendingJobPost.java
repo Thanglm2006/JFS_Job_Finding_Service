@@ -9,10 +9,10 @@ import org.hibernate.type.SqlTypes;
 
 
 @Entity
-@Table(name = "job_post")
+@Table(name = "pending_job_post")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-public class JobPost {
+public class PendingJobPost {
     @Getter
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,13 +34,13 @@ public class JobPost {
 
     @Column(nullable = false)
     private Instant createdAt=Instant.now();
-    public JobPost(String title, Employer employer, Map<String, Object> description) {
+    public PendingJobPost(String title, Employer employer, Map<String, Object> description) {
         this.title = title;
         this.employer = employer;
         this.description = description;
     }
 
-    public JobPost(String title, Employer employer, Map<String, Object> description, String workspacePicture) {
+    public PendingJobPost(String title, Employer employer, Map<String, Object> description, String workspacePicture) {
         this.title = title;
         this.employer = employer;
         this.description = description;

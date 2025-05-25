@@ -3,6 +3,7 @@ import com.example.JFS_Job_Finding_Service.DTO.ApplicantRegisterRequest;
 import com.example.JFS_Job_Finding_Service.DTO.CheckPassRequest;
 import com.example.JFS_Job_Finding_Service.DTO.LoginRequest;
 import com.example.JFS_Job_Finding_Service.DTO.EmployerRegisterRequest;
+import com.example.JFS_Job_Finding_Service.Services.AdminService;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.*;
@@ -17,6 +18,8 @@ import java.util.Map;
 public class AuthController {
     @Autowired
     private UserService userService;
+    @Autowired
+    private AdminService adminService;
 
     @PostMapping("/register/employer")
     @Operation(summary = "User Registration", description = "Register a new user with email, password, name, and role.")
@@ -25,7 +28,7 @@ public class AuthController {
         return userService.EmployerRegister(
                 employerRegisterRequest.getEmail(),
                 employerRegisterRequest.getPassword(), employerRegisterRequest.getRetypePass(),
-                employerRegisterRequest.getName(), employerRegisterRequest.getEmployerType());
+                employerRegisterRequest.getName(), employerRegisterRequest.getEmployerType(), employerRegisterRequest.getDateOfBirth(), employerRegisterRequest.getGender());
     }
 
     @PostMapping("/register/applicant")
@@ -34,7 +37,7 @@ public class AuthController {
         return userService.ApplicantRegister(
                 applicantRegisterRequest.getEmail(),
                 applicantRegisterRequest.getPassword(), applicantRegisterRequest.getRetypePass(),
-                applicantRegisterRequest.getName(), applicantRegisterRequest.getResume());
+                applicantRegisterRequest.getName(), applicantRegisterRequest.getDateOfBirth(),applicantRegisterRequest.getGender());
     }
 
     @PostMapping("/login/employer")
@@ -52,6 +55,16 @@ public class AuthController {
     public ResponseEntity<?> ApplicantLogin(@RequestBody LoginRequest loginRequest) {
         try{
             return userService.ApplicantLogin(loginRequest.getEmail(),loginRequest.getPassword());
+        }
+        catch (RuntimeException e){
+            return ResponseEntity.status(401).body(e.getMessage());
+        }
+    }
+    @PostMapping("/login/admin")
+    @Operation(summary = "Admin Login", description = "Authenticate an admin and return a JWT token.")
+    public ResponseEntity<?> AdminLogin(@RequestBody LoginRequest loginRequest) {
+        try{
+            return adminService.login(loginRequest.getEmail(),loginRequest.getPassword());
         }
         catch (RuntimeException e){
             return ResponseEntity.status(401).body(e.getMessage());
@@ -79,6 +92,15 @@ public class AuthController {
         if(headers!=null && headers.get("authorization")!=null && headers.get("email")!=null){
             return userService.isTokenValid(headers.get("authorization").get(0).substring(7), headers.get("email").get(0));
 
+        }else{
+            return ResponseEntity.status(401).body("Token is null");
+        }
+    }
+    @PostMapping("/profile")
+    @Operation(summary = "get profile information")
+    public ResponseEntity<?> getProfile(@RequestHeader HttpHeaders headers, @RequestParam("userId") Long userId) {
+        if(headers!=null && headers.get("token")!=null){
+            return userService.getProfile(headers.getFirst("token"), userId);
         }else{
             return ResponseEntity.status(401).body("Token is null");
         }

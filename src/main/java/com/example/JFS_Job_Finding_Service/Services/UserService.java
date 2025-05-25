@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -37,7 +38,7 @@ public class UserService {
     public User getUserById(long id){
         return userRepository.findById(id).orElse(null);
     }
-    public ResponseEntity<?> EmployerRegister(String email, String password, String confirmPass, String name, String employerType) {
+    public ResponseEntity<?> EmployerRegister(String email, String password, String confirmPass, String name, String employerType, Date dateOfBirth, String gender) {
 
         Map<String, Object> response = new HashMap<>();
         if (!password.equals(confirmPass)) {
@@ -55,6 +56,8 @@ public class UserService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(name);
+        user.setDateOfBirth(dateOfBirth);
+        user.setGender(gender);
         user.setRole("Employer");
         try{
             userRepository.save(user);
@@ -98,7 +101,7 @@ public class UserService {
         response.put("user", user.get());
         return ResponseEntity.ok(response);
     }
-    public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Map<String, Object> resume) {
+    public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Date dateOfBirth, String gender) {
 
         Map<String, Object> response = new HashMap<>();
         if (!password.equals(confirmPass)) {
@@ -116,6 +119,8 @@ public class UserService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(name);
+        user.setDateOfBirth(dateOfBirth);
+        user.setGender(gender);
         user.setRole("Applicant");
         try{
             userRepository.save(user);
@@ -124,7 +129,7 @@ public class UserService {
             response.put("message", "Email không hợp lệ!");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
-        Applicant applicant=Applicant.builder().user(user).resume(resume).build();
+        Applicant applicant=Applicant.builder().user(user).build();
         try {
             applicantRepository.save(applicant);
         }catch (DataIntegrityViolationException e){
@@ -158,6 +163,89 @@ public class UserService {
         response.put("token", token);
         response.put("user", user.get());
         return ResponseEntity.ok(response);
+    }
+    public ResponseEntity<?> UpdateResume(String token,String email, Map<String, Object> resume) {
+        if(jwtUtil.validateToken(token, email)){
+            User user=userRepository.findByEmail(email).get();
+            Applicant applicant = applicantRepository.findByUser(user).get();
+            if(applicant==null){
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Applicant not found");
+                return ResponseEntity.ok(response);
+            }
+            applicant.setResume(resume);
+            Map<String, Object> response = new HashMap<>();
+
+            try {
+                applicantRepository.save(applicant);
+                response.put("status", "success");
+                response.put("user", user);
+            } catch (Exception e) {
+                response.put("status", "error");
+                response.put("message", e.getMessage());
+            }
+            return ResponseEntity.ok(response);
+        }
+        else{
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Token invalid");
+            return ResponseEntity.ok(response);
+        }
+    }
+    public ResponseEntity<?> getProfile(String token, Long userId) {
+        Map<String, Object> response = new HashMap<>();
+        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            response.put("status", "fail");
+            response.put("message", "Unauthorized access");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        Optional<User> user = userRepository.findById(userId);
+        if(user.isEmpty()){
+            response.put("status", "fail");
+            response.put("message", "User not found");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        response.put("phone", user.get().getPhone());
+        response.put("address", user.get().getAddress());
+        response.put("gender", user.get().getGender());
+        response.put("date_of_birth", user.get().getDateOfBirth());
+        response.put("avatar", user.get().getAvatarUrl());
+        response.put("createdAt", user.get().getCreatedAt());
+        response.put("email", user.get().getEmail());
+
+        if(user.get().getRole().equals("Applicant")){
+            Optional<Applicant> applicant = applicantRepository.findByUser(user.get());
+            if(applicant.isEmpty()){
+                response.put("status", "fail");
+                response.put("message", "Applicant not found");
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            }
+            response.put("status", "success");
+            response.put("role", "Applicant");
+            response.put("applicantId", applicant.get().getId());
+            response.put("resume", applicant.get().getResume());
+            return ResponseEntity.ok(response);
+
+        } else if(user.get().getRole().equals("Employer")){
+            Optional<Employer> employer = employerRepository.findByUser(user.get());
+            if(employer.isEmpty()){
+                response.put("status", "fail");
+                response.put("message", "Employer not found");
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            }
+            response.put("status", "success");
+            response.put("role", "Employer");
+            response.put("employerId", employer.get().getId());
+            response.put("resume", employer.get().getType());
+
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("status", "fail");
+            response.put("message", "Invalid user role");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
     }
     public ResponseEntity<?> checkEmail(String email) {
         Map<String, Object> response = new HashMap<>();

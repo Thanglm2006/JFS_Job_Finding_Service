@@ -10,7 +10,7 @@ public class SavedJob {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    @Getter
     @ManyToOne
     @JoinColumn(name = "applicant_id", nullable = false)
     private Applicant applicant;

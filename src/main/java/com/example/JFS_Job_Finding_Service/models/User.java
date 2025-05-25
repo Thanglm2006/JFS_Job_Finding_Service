@@ -1,7 +1,9 @@
 package com.example.JFS_Job_Finding_Service.models;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.Instant;
+import java.util.Date;
 import java.util.Objects;
 
 @Entity
@@ -25,6 +27,10 @@ public class User {
 
     @Column(unique = true)
     private String phone;
+    @Column (nullable = true)
+    private Date dateOfBirth;
+    @Column(nullable = true)
+    private String gender;
 
     private String address;
 

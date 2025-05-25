@@ -1,7 +1,8 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
+import com.cloudinary.*;
+import com.cloudinary.http44.*;
+import com.cloudinary.utils.*;
 import com.example.JFS_Job_Finding_Service.models.ImageFolders;
 import com.example.JFS_Job_Finding_Service.repository.ImageFoldersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
