@@ -14,12 +14,7 @@ public class ChatController {
     @Autowired
     private ChatService chatService;
 
-    @PostMapping("/users")
-    @Operation(summary="take all users chated with")
-    public ResponseEntity<?> getAllUsersChatedWith(@RequestParam long senderId, @RequestHeader HttpHeaders headers) {
-        String token=headers.get("token").get(0).toString();
-        return chatService.getAllUsersChatedWith(senderId);
-    }
+
     @PostMapping("/messages")
     @Operation(summary="take next 20 messages between two users")
     public ResponseEntity<?> getAllMessages(@RequestParam long senderId, @RequestParam long receiverId, @RequestParam int page,@RequestHeader HttpHeaders headers) {

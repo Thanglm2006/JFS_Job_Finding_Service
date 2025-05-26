@@ -56,7 +56,7 @@ public class ChatService {
         users.addAll(uniqueUsers);
         List<userInChat> res= new ArrayList<>();
         users.forEach(user->{
-            userInChat userInChat = new userInChat(user.getId(), user.getFullName());
+            userInChat userInChat = new userInChat(user.getId(), user.getFullName(),user.getAvatarUrl());
             res.add(userInChat);
         });
         return ResponseEntity.ok(res);
