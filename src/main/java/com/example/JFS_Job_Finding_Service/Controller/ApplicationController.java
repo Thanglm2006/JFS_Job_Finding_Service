@@ -6,12 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
-@Controller("/api/application")
+@RestController
+@RequestMapping("/api/application")
 public class ApplicationController {
     @Autowired
     private ApplicationService applicationService;
@@ -37,4 +35,11 @@ public class ApplicationController {
     ) {
         return applicationService.reject(headers.getFirst("token"), applicantResponse.getApplicationId(), applicantResponse.getApplicantId());
     }
+    @PostMapping("/getAllApplicationsForEmployer")
+    public ResponseEntity<?> getAllApplicationsForEmployer(
+            @RequestHeader HttpHeaders headers
+    ) {
+        return applicationService.getAllApplicationForEmployer(headers.getFirst("token"));
+    }
+
 }

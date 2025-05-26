@@ -1,9 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.example.JFS_Job_Finding_Service.models.Applicant;
-import com.example.JFS_Job_Finding_Service.models.Application;
-import com.example.JFS_Job_Finding_Service.models.JobPost;
-import com.example.JFS_Job_Finding_Service.models.Notification;
+import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
 import com.example.JFS_Job_Finding_Service.repository.ApplicationRepository;
 import com.example.JFS_Job_Finding_Service.repository.JobPostRepository;
@@ -12,6 +9,11 @@ import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class ApplicationService {
@@ -104,5 +106,44 @@ public class ApplicationService {
         notification.setCreatedAt(java.time.Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application rejected for applicant " + applicant.getUser().getFullName());
+    }
+    public ResponseEntity<?> getAllApplicationForEmployer(String token){
+        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(401).body("Unauthorized access");
+        }
+        if(!jwtUtil.checkWhetherIsEmployer(token)) {
+            return ResponseEntity.status(403).body("You do not have permission to view applications");
+        }
+        Employer employer = jwtUtil.getEmployer(token);
+        if (employer == null) {
+            return ResponseEntity.status(404).body("Employer not found");
+        }
+        List<JobPost> jobPosts = jobPostRepository.findByEmployer(employer);
+        Map<String, Object> response = new HashMap<>();
+        if (jobPosts.isEmpty()) {
+            response.put("status", "fail");
+            response.put("message", "No job posts found for this employer");
+            return ResponseEntity.ok(response);
+        }
+        List<Map<String, Object>> applications = jobPosts.stream().map(jobPost -> {
+            Application application = applicationRepository.findByJob(jobPost);
+            if (application == null) {
+                return null;
+            }
+            Map<String, Object> applicationData = new HashMap<>();
+            applicationData.put("applicationId", application.getId());
+            applicationData.put("applicantName", application.getApplicant().getUser().getFullName());
+            applicationData.put("status", application.getStatus());
+            applicationData.put("appliedAt", application.getAppliedAt());
+            applicationData.put("applicantId", application.getApplicant().getId());
+            applicationData.put("jobId", jobPost.getId());
+            applicationData.put("jobTitle", jobPost.getTitle());
+            applicationData.put("avatar", application.getApplicant().getUser().getAvatarUrl());
+            return applicationData;
+        }).filter(Objects::nonNull)
+                .toList();
+        response.put("status", "success");
+        response.put("applications", applications);
+        return ResponseEntity.ok(response);
     }
 }
