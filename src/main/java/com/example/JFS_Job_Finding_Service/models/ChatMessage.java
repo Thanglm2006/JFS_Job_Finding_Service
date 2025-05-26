@@ -21,17 +21,26 @@ public class ChatMessage {
     @JoinColumn(name = "receiver_id", nullable = false)
     private User receiver;
 
-    @Column(nullable = false)
+    @Column()
     private String message;
 
     @Column(nullable = false, updatable = false)
     private Instant timestamp;
+    @Column(name="file_url", nullable=true)
+    private String fileUrl;
 
     public ChatMessage(User sender, User receiver, String message) {
         this.sender = sender;
         this.receiver = receiver;
         this.message = message;
     }
+    public ChatMessage(User sender, User receiver, String message, String fileUrl) {
+        this.sender = sender;
+        this.receiver = receiver;
+        this.message = message;
+        this.fileUrl = fileUrl;
+    }
+
     @PrePersist
     protected void onCreate() {
         this.timestamp = Instant.now();

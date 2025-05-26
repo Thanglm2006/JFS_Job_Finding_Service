@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -29,5 +30,9 @@ public class CloudinaryService {
             imageFoldersRepository.save(new ImageFolders(folderName, uploadResult.get("secure_url").toString()));
         }
         return folderName;
+    }
+    public String uploadFile(File file) throws IOException {
+        Map uploadResult = cloudinary.uploader().upload(file, ObjectUtils.asMap("folder", "messageIMGs"));
+        return uploadResult.get("secure_url").toString();
     }
 }

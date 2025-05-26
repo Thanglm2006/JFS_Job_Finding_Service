@@ -93,12 +93,12 @@ public class UserService {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         Optional<Employer> u=employerRepository.findByUser(user.get());
-        System.out.println(u.get().getId());
         String token=jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("token", token);
         response.put("user", user.get());
+        u.ifPresent(employer -> response.put("employer", employer));
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Date dateOfBirth, String gender) {
@@ -156,12 +156,12 @@ public class UserService {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         Optional<Applicant> u=applicantRepository.findByUser(user.get());
-        System.out.println(u.get().getId()+"\n"+u.get().getResume());
         String token=jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("token", token);
         response.put("user", user.get());
+        u.ifPresent(applicant -> response.put("applicant", applicant));
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> UpdateResume(String token,String email, Map<String, Object> resume) {
