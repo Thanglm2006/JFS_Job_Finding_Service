@@ -14,6 +14,7 @@ public class Employer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
 
+    @Getter
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
     private User user;
@@ -25,5 +26,8 @@ public class Employer {
     public Employer(User user, employer_type type) {
         this.user = user;
         this.type = type;
+    }
+    public String getFullName() {
+        return user.getFullName();
     }
 }

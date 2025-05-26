@@ -3,6 +3,7 @@ import com.example.JFS_Job_Finding_Service.DTO.ApplicantRegisterRequest;
 import com.example.JFS_Job_Finding_Service.DTO.CheckPassRequest;
 import com.example.JFS_Job_Finding_Service.DTO.LoginRequest;
 import com.example.JFS_Job_Finding_Service.DTO.EmployerRegisterRequest;
+import com.example.JFS_Job_Finding_Service.Services.AdminService;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.*;
@@ -17,14 +18,17 @@ import java.util.Map;
 public class AuthController {
     @Autowired
     private UserService userService;
+    @Autowired
+    private AdminService adminService;
 
     @PostMapping("/register/employer")
     @Operation(summary = "User Registration", description = "Register a new user with email, password, name, and role.")
     public ResponseEntity<?> EmployerRegister(@RequestBody EmployerRegisterRequest employerRegisterRequest) {
+        System.out.println(employerRegisterRequest.toString());
         return userService.EmployerRegister(
                 employerRegisterRequest.getEmail(),
-                employerRegisterRequest.getPassword(), employerRegisterRequest.getConfirmPassword(),
-                employerRegisterRequest.getName(), employerRegisterRequest.getEmployerType());
+                employerRegisterRequest.getPassword(), employerRegisterRequest.getRetypePass(),
+                employerRegisterRequest.getName(), employerRegisterRequest.getEmployerType(), employerRegisterRequest.getDateOfBirth(), employerRegisterRequest.getGender());
     }
 
     @PostMapping("/register/applicant")
@@ -32,16 +36,15 @@ public class AuthController {
     public ResponseEntity<?> ApplicantRegister(@RequestBody ApplicantRegisterRequest applicantRegisterRequest) {
         return userService.ApplicantRegister(
                 applicantRegisterRequest.getEmail(),
-                applicantRegisterRequest.getPassword(), applicantRegisterRequest.getConfirmPassword(),
-                applicantRegisterRequest.getName(), applicantRegisterRequest.getResume());
+                applicantRegisterRequest.getPassword(), applicantRegisterRequest.getRetypePass(),
+                applicantRegisterRequest.getName(), applicantRegisterRequest.getDateOfBirth(),applicantRegisterRequest.getGender());
     }
 
     @PostMapping("/login/employer")
     @Operation(summary = "User Login", description = "Authenticate a user and return a JWT token.")
     public ResponseEntity<?> EmployerLogin(@RequestBody LoginRequest loginRequest) {
         try{
-            String token= userService.EmployerLogin(loginRequest.getEmail(),loginRequest.getPassword());
-            return ResponseEntity.ok(token);
+            return userService.EmployerLogin(loginRequest.getEmail(),loginRequest.getPassword());
         }
         catch (RuntimeException e){
             return ResponseEntity.status(401).body(e.getMessage());
@@ -51,12 +54,27 @@ public class AuthController {
     @Operation(summary = "User Login", description = "Authenticate a user and return a JWT token.")
     public ResponseEntity<?> ApplicantLogin(@RequestBody LoginRequest loginRequest) {
         try{
-            String token= userService.ApplicantLogin(loginRequest.getEmail(),loginRequest.getPassword());
-            return ResponseEntity.ok(token);
+            return userService.ApplicantLogin(loginRequest.getEmail(),loginRequest.getPassword());
         }
         catch (RuntimeException e){
             return ResponseEntity.status(401).body(e.getMessage());
         }
+    }
+    @PostMapping("/login/admin")
+    @Operation(summary = "Admin Login", description = "Authenticate an admin and return a JWT token.")
+    public ResponseEntity<?> AdminLogin(@RequestBody LoginRequest loginRequest) {
+        try{
+            return adminService.login(loginRequest.getEmail(),loginRequest.getPassword());
+        }
+        catch (RuntimeException e){
+            return ResponseEntity.status(401).body(e.getMessage());
+        }
+    }
+    @PostMapping("/checkEmail")
+    @Operation(summary = "check whether the email is already used")
+    public ResponseEntity<?> checkEmail(@RequestBody Map<String, Object> body ) {
+        System.out.println(body.get("email").toString());
+        return userService.checkEmail(body.get("email").toString());
     }
     @PostMapping("/checkPass")
     @Operation(summary = "check whether the password is correct", description = "use token and password for checking process!")
@@ -67,5 +85,24 @@ public class AuthController {
     @Operation(summary = "check whether the permission is right")
     public ResponseEntity<?> checkPermission(@RequestBody Map<String, Object> body ) {
         return userService.checkPermission(body.get("token").toString(),body.get("role").toString());
+    }
+    @PostMapping("/isTokenValid")
+    @Operation(summary = "check whether the token is valid")
+    public ResponseEntity<?> isTokenValid(@RequestHeader HttpHeaders headers ) {
+        if(headers!=null && headers.get("authorization")!=null && headers.get("email")!=null){
+            return userService.isTokenValid(headers.get("authorization").get(0).substring(7), headers.get("email").get(0));
+
+        }else{
+            return ResponseEntity.status(401).body("Token is null");
+        }
+    }
+    @PostMapping("/profile")
+    @Operation(summary = "get profile information")
+    public ResponseEntity<?> getProfile(@RequestHeader HttpHeaders headers, @RequestParam("userId") Long userId) {
+        if(headers!=null && headers.get("token")!=null){
+            return userService.getProfile(headers.getFirst("token"), userId);
+        }else{
+            return ResponseEntity.status(401).body("Token is null");
+        }
     }
 }

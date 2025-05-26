@@ -1,8 +1,10 @@
+/* install pgroonga first*/
+
 CREATE TYPE employer_type AS ENUM(
     'Company', 'Shop', 'Restaurant', 'Supermarket', 'Hotel', 
     'School', 'Hospital', 'Recruiter', 'Government', 'NGO', 
     'Startup', 'Event Organizer', 'Construction', 'Transportation', 
-    'Salon', 'Gym', 'Farm', 'Entertainment', 'E-commerce','individual'
+    'Salon', 'Gym', 'Farm', 'Entertainment', 'E-commerce','individual','Other'
 );
 
 
@@ -14,6 +16,8 @@ CREATE TABLE users(
     password TEXT NOT NULL,
     phone TEXT UNIQUE CHECK (phone ~ '^[0-9]{10,15}$'),
     address text,
+    gender text check (gender in ('male', 'female', 'other')) not null,
+    date_of_birth DATE,
     role TEXT CHECK (role IN ('Employer', 'Applicant')) NOT NULL,
     avatar_url TEXT,
     created_at TIMESTAMP DEFAULT NOW()
@@ -24,7 +28,13 @@ create table employer(
     user_id int references users(id) on delete cascade,
     type employer_type not null
 );
-
+create table admin(
+    id serial primary key,
+    full_name Text NOT NULL,
+    email TEXT UNIQUE NOT NULL CHECK (      email ~  '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
+        ),
+    password TEXT NOT NULL
+);
 
 create sequence employer_id_seq start 1;
 create function generate_employer_id() returns trigger as $$
@@ -67,6 +77,26 @@ create table job_post(
     workspace_picture text,
     created_at timestamp not null default now()
 );
+create table pending_job_post(
+    id text primary key,
+    title text not null,
+    employer_id text references employer(id) on delete cascade,
+    description jsonB not null check (description ? 'location'),
+    workspace_picture text,
+    created_at timestamp not null default now()
+);
+create table notification(
+    id serial primary key,
+    user_id int not null references users(id) on delete cascade,
+    message text not null,
+    is_read boolean default false,
+    created_at timestamp default now()
+);
+create table image_folders(
+    id serial primary key,
+    folder_name text not null,
+    file_name text not null
+);
 CREATE SEQUENCE job_post_id_seq START 1;
 CREATE FUNCTION generate_job_post_id() RETURNS TRIGGER AS $$
 BEGIN
@@ -98,7 +128,8 @@ CREATE TABLE chat_messages(
     sender_id INT NOT NULL references users(id) on delete cascade,      -- User sending the message
     receiver_id INT NOT NULL references users(id) on delete cascade,    -- User receiving the message
     message TEXT NOT NULL,       -- Chat message
+    file_url text,
     timestamp TIMESTAMP DEFAULT NOW() -- Time message was sent
 );
 
-
+SET enable_seqscan = off;

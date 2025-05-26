@@ -32,4 +32,9 @@ public class ChatMessage {
         this.receiver = receiver;
         this.message = message;
     }
+    @PrePersist
+    protected void onCreate() {
+        this.timestamp = Instant.now();
+    }
+
 }
