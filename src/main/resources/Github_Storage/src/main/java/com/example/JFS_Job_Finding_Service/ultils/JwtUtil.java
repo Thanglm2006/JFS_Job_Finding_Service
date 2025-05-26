@@ -1,8 +1,10 @@
 package com.example.JFS_Job_Finding_Service.ultils;
 
 import com.example.JFS_Job_Finding_Service.Services.UserService;
+import com.example.JFS_Job_Finding_Service.models.Applicant;
 import com.example.JFS_Job_Finding_Service.models.Employer;
 import com.example.JFS_Job_Finding_Service.models.User;
+import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
 import com.example.JFS_Job_Finding_Service.repository.EmployerRepository;
 import com.example.JFS_Job_Finding_Service.repository.UserRepository;
 import io.jsonwebtoken.*;
@@ -19,6 +21,9 @@ public class JwtUtil {
     private EmployerRepository employerRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private ApplicantRepository applicantRepository;
+
     public JwtUtil() {
     }
 
@@ -29,7 +34,6 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
     }
 
-    // ✅ Generate JWT Token
     public String generateToken(String email,String role) {
 
         return Jwts.builder()
@@ -45,6 +49,9 @@ public class JwtUtil {
         int idx=subject.indexOf("|");
         return subject.substring(0,idx);
     }
+    public boolean validateToken(String token) {
+        return !isTokenExpired(token) && extractEmail(token) != null;
+    }
     public String extractSubject(String token) {
         return Jwts.parser()
                 .setSigningKey(getSigningKey())
@@ -57,7 +64,23 @@ public class JwtUtil {
         String email = extractEmail(token);
         User user;
         user=userRepository.findByEmail(email).get();
-        return employerRepository.findByUser(user).get();
+        Employer employer = employerRepository.findByUser(user).orElse(null);
+        if (employer == null) {
+            System.out.println("Employer not found for email: " + email);
+            return null;
+        }
+        return employer;
+    }
+    public Applicant getApplicant(String token) {
+        String email = extractEmail(token);
+        User user;
+        user=userRepository.findByEmail(email).get();
+        Applicant applicant= applicantRepository.findByUser(user).orElse(null);
+        if (applicant == null) {
+            System.out.println("Applicant not found for email: " + email);
+            return null;
+        }
+        return applicant;
     }
     //check permission
     public boolean checkPermission(String token, String role) {
@@ -73,9 +96,17 @@ public class JwtUtil {
         String role=subject.substring(idx+1);
         return role.equals("Employer");
     }
+    //check whether is an applicant
+    public boolean checkWhetherIsApplicant(String token) {
+        String subject=extractSubject(token);
+        int idx=subject.indexOf("|");
+        String role=subject.substring(idx+1);
+        return role.equals("Applicant");
+    }
     // ✅ Check if Token is Valid
     public boolean validateToken(String token, String userEmail) {
         String trueEmail=extractEmail(token);
+        System.out.println("trueEmail: "+trueEmail);
         return trueEmail.equals(userEmail) && !isTokenExpired(token);
     }
 
