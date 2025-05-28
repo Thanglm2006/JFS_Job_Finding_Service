@@ -28,7 +28,7 @@ public class ApplicationService {
     @Autowired
     private NotificationRepository notificationRepository;
 
-    public ResponseEntity<?> applyForJob(String token, Long jobId) {
+    public ResponseEntity<?> applyForJob(String token, String jobId) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
@@ -48,6 +48,27 @@ public class ApplicationService {
         notification.setCreatedAt(java.time.Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application submitted successfully for job ID: " + jobId);
+    }
+    public ResponseEntity<?> unApplyForJob(String token, String jobId) {
+        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(401).body("Unauthorized access");
+        }
+        if(!jwtUtil.checkWhetherIsApplicant(token)) {
+            return ResponseEntity.status(403).body("You do not have permission to unapply for jobs");
+        }
+        Applicant applicant = jwtUtil.getApplicant(token);
+        JobPost job = jobPostRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+        Application application = applicationRepository.findByJobAndApplicant(job, applicant)
+                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
+        applicationRepository.delete(application);
+        Notification notification = new Notification();
+        notification.setUser(job.getEmployer().getUser());
+        notification.setMessage("Application for job ID " + jobId + " has been withdrawn by applicant " + applicant.getUser().getFullName());
+        notification.setRead(false);
+        notification.setCreatedAt(java.time.Instant.now());
+        notificationRepository.save(notification);
+        return ResponseEntity.ok("Application withdrawn successfully for job ID: " + jobId);
     }
     public ResponseEntity<?> accept(String token, Long applicationId, Long applicantId) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {

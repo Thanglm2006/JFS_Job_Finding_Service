@@ -4,9 +4,7 @@ import com.example.JFS_Job_Finding_Service.DTO.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.Applicant;
 import com.example.JFS_Job_Finding_Service.models.ImageFolders;
 import com.example.JFS_Job_Finding_Service.models.JobPost;
-import com.example.JFS_Job_Finding_Service.repository.ImageFoldersRepository;
-import com.example.JFS_Job_Finding_Service.repository.JobPostRepository;
-import com.example.JFS_Job_Finding_Service.repository.SavedJobRepository;
+import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -33,6 +31,10 @@ public class PostService {
     private ImageFoldersRepository imageFoldersRepository;
     @Autowired
     private SavedJobRepository savedJobRepository;
+    @Autowired
+    private ApplicantRepository applicantRepository;
+    @Autowired
+    private ApplicationRepository applicationRepository;
 
 
     public ResponseEntity<?> getSomePosts(String token, int page, int size) {
@@ -66,15 +68,23 @@ public class PostService {
                 }
             }
             boolean isSaved= savedJobRepository.findByApplicantAndJob(applicant, jobPost) != null;
+            int totalSaved = savedJobRepository.countByJob(jobPost);
+            boolean isApplied= applicationRepository.findByApplicant(applicant)
+                    .stream()
+                    .anyMatch(application -> application.getJob().getId().equals(jobPost.getId()));
             Map<String, Object> postData = new HashMap<>();
             postData.put("id", jobPost.getId());
             postData.put("title", jobPost.getTitle());
             postData.put("employerName", employerName);
+            postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
             postData.put("isSaved", isSaved);
             postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
             postData.put("description", jobPost.getDescription());
+            postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
             postData.put("workspacePicture", pics.toArray());
             postData.put("createdAt", jobPost.getCreatedAt());
+            postData.put("totalSaved", totalSaved);
+            postData.put("isApplied", isApplied);
             return postData;
         }).toList();
 

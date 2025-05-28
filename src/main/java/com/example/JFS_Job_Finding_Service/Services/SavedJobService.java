@@ -30,7 +30,7 @@ public class SavedJobService {
     @Autowired
     private JobPostRepository jobPostRepository;
 
-    public ResponseEntity<?> saveJob(String token, Long jobId) {
+    public ResponseEntity<?> saveJob(String token, String jobId) {
 
         Map<String, Object> response = new HashMap<>();
 
@@ -52,7 +52,42 @@ public class SavedJobService {
 
         response.put("status", "success");
         response.put("message", "Job saved successfully");
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        System.out.println("Job saved successfully for applicant: " + applicant.getId() + " and job: " + jobPost.getId());
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    public ResponseEntity<?> unSaveJob(String token, String jobId) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            response.put("status", "fail");
+            response.put("message", "Unauthorized access");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+
+        Applicant applicant = jwtUtil.getApplicant(token);
+        if (applicant == null) {
+            response.put("status", "fail");
+            response.put("message", "Applicant not found");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        JobPost job= jobPostRepository.findById(jobId).orElse(null);
+        if (job == null) {
+            response.put("status", "fail");
+            response.put("message", "Job not found");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        SavedJob savedJob = savedJobRepository.findByApplicantAndJob(applicant, job);
+        if (savedJob == null) {
+            response.put("status", "fail");
+            response.put("message", "Saved job not found");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+
+        savedJobRepository.delete(savedJob);
+        response.put("status", "success");
+        response.put("message", "Job unsaved successfully");
+        System.out.println("Job unsaved successfully for applicant: " + applicant.getId() + " and job: " + job.getId());
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
     public ResponseEntity<?> getSavedJobs(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();

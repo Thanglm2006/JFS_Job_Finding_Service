@@ -10,7 +10,8 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ApplicationRepository extends JpaRepository<Application, Long> {
+public interface ApplicationRepository extends JpaRepository<Application, String> {
     Optional<Application> findByApplicant(Applicant applicant);
     Application findByJob(JobPost jobPost);
+    Optional<Application> findByJobAndApplicant(JobPost jobPost, Applicant applicant);
 }

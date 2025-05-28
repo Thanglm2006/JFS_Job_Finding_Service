@@ -1,9 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 import com.example.JFS_Job_Finding_Service.DTO.PostingRequest;
-import com.example.JFS_Job_Finding_Service.Services.CloudinaryService;
-import com.example.JFS_Job_Finding_Service.Services.PendingJobPostService;
-import com.example.JFS_Job_Finding_Service.Services.PostService;
-import com.example.JFS_Job_Finding_Service.Services.SavedJobService;
+import com.example.JFS_Job_Finding_Service.Services.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +28,8 @@ public class PostController {
     private PendingJobPostService pendingJobPostService;
     @Autowired
     private SavedJobService savedJobService;
+    @Autowired
+    private ApplicationService applicationService;
 
     @Operation(summary = "Add a new post", description = "to post, you need to specify the Header with token and the body with title, description, and workspace picture")
     @PostMapping("/addPost")
@@ -72,12 +71,36 @@ public class PostController {
             return ResponseEntity.status(500).body("Error fetching posts: " + e.getMessage());
         }
     }
-
+    @GetMapping("/getSomePendingPosts")
+    @Operation(summary = "select 10 pending posts per time, only admin can do this")
+    public ResponseEntity<?> getSomePendingPosts(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
+    ) {
+        try {
+            return pendingJobPostService.getSomePendingPosts(headers.getFirst("token"), page, size);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching pending posts: " + e.getMessage());
+        }
+    }
+    @PostMapping("/rejectPost")
+    @Operation(summary = "reject a post, only admin can do this")
+    public ResponseEntity<?> rejectPost(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam("pendingId") String pendingId
+    ) {
+        try {
+            return pendingJobPostService.rejectPost(headers.getFirst("token"), pendingId);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error rejecting post: " + e.getMessage());
+        }
+    }
     @PostMapping("/acceptPost")
     @Operation(summary = "accept a post, only admin can do this")
     public ResponseEntity<?> acceptPost(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("pendingId") Long pendingId
+            @RequestParam("pendingId") String pendingId
     ) {
         try {
             return pendingJobPostService.acceptPost(headers.getFirst("token"), pendingId);
@@ -85,16 +108,52 @@ public class PostController {
             return ResponseEntity.status(500).body("Error accepting post: " + e.getMessage());
         }
     }
-    @PostMapping("/savePost")
+    @GetMapping("/savePost")
     @Operation(summary = "save a post, only applicant can do this")
     public ResponseEntity<?> savePost(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("jobId") Long jobId
+            @RequestParam("jobId") String jobId
     ) {
         try {
             return savedJobService.saveJob(headers.getFirst("token"), jobId);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error saving post: " + e.getMessage());
+        }
+    }
+    @GetMapping("/unSavePost")
+    @Operation(summary = "unsave a post, only applicant can do this")
+    public ResponseEntity<?> unsavePost(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam("jobId") String jobId
+    ) {
+        try {
+            return savedJobService.unSaveJob(headers.getFirst("token"), jobId);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error unsaving post: " + e.getMessage());
+        }
+    }
+    @GetMapping("/apply")
+    @Operation(summary = "apply for a post, only applicant can do this")
+    public ResponseEntity<?> apply(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam("jobId") String jobId
+    ) {
+        try {
+            return applicationService.applyForJob(headers.getFirst("token"), jobId);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error applying for post: " + e.getMessage());
+        }
+    }
+    @GetMapping("/unApply")
+    @Operation(summary = "unapply for a post, only applicant can do this")
+    public ResponseEntity<?> unApply(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam("jobId") String jobId
+    ) {
+        try {
+            return applicationService.unApplyForJob(headers.getFirst("token"), jobId);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error unapplying for post: " + e.getMessage());
         }
     }
     @GetMapping("/getSavedPosts")

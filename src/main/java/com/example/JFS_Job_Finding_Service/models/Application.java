@@ -27,7 +27,7 @@ public class Application {
     private String status = "Pending";
 
     @Column(nullable = false, updatable = false)
-    private Instant appliedAt;
+    private Instant appliedAt= Instant.now();
 
     public Application(JobPost job, Applicant applicant, String status) {
         this.job = job;

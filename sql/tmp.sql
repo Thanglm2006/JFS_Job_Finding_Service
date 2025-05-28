@@ -85,6 +85,7 @@ create table pending_job_post(
     workspace_picture text,
     created_at timestamp not null default now()
 );
+
 create table notification(
     id serial primary key,
     user_id int not null references users(id) on delete cascade,
@@ -92,11 +93,48 @@ create table notification(
     is_read boolean default false,
     created_at timestamp default now()
 );
+
 create table image_folders(
     id serial primary key,
     folder_name text not null,
     file_name text not null
 );
+
+create table job_taken(
+    id serial primary key,
+    job_id text not null references job_post(id) on delete cascade,
+    applicant_id text not null references applicant(id) on delete cascade,
+    taken_at timestamp default now()
+);
+
+create table schedule(
+    id serial primary key,
+    applicant_id text not null references applicant(id) on delete cascade,
+    job_id text not null references job_post(id) on delete cascade,
+    start_time int not null check(start_time >= 0 and start_time <= 1439),
+    end_time int not null check(end_time > start_time and end_time <= 1439),
+    day text not null check(day in ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')),
+    description text not null,
+    created_at timestamp default now()
+);
+
+create table report_on_user(
+    id serial primary key,
+    reported_by int not null references users(id) on delete cascade,
+    reported_user int not null references users(id) on delete cascade,
+    reason text not null,
+    details text,
+    created_at timestamp default now()
+);
+create table report_on_post(
+    id serial primary key,
+    reported_by int not null references users(id) on delete cascade,
+    reported_post text not null references job_post(id) on delete cascade,
+    reason text not null,
+    details text,
+    created_at timestamp default now()
+);
+
 CREATE SEQUENCE job_post_id_seq START 1;
 CREATE FUNCTION generate_job_post_id() RETURNS TRIGGER AS $$
 BEGIN

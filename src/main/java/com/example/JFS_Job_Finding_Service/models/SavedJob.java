@@ -20,7 +20,7 @@ public class SavedJob {
     private JobPost job;
 
     @Column(nullable = false, updatable = false)
-    private Instant savedAt;
+    private Instant savedAt= Instant.now();
 
     public SavedJob(Applicant applicant, JobPost job) {
         this.applicant = applicant;
