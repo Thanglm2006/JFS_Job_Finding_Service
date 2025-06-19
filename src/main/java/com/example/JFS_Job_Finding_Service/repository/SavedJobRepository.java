@@ -17,4 +17,6 @@ public interface SavedJobRepository extends JpaRepository<SavedJob, Long> {
     Page<SavedJob> findByApplicant(Applicant applicant, Pageable pageable);
     SavedJob findByApplicantAndJob(Applicant applicant, JobPost job);
     int countByJob(JobPost job);
+
+    Iterable<? extends SavedJob> findByJob(JobPost jobPost);
 }

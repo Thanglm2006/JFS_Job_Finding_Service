@@ -46,12 +46,6 @@ public class PostService {
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         Applicant applicant= jwtUtil.getApplicant(token);
-        if (applicant == null) {
-            System.out.println("Applicant not found");
-            response.put("status", "fail");
-            response.put("message", "Người dùng không tồn tại");
-            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-        }
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<JobPost> jobPostsPage = jobPostRepository.findAll(pageable);
 
@@ -67,9 +61,11 @@ public class PostService {
                     pics.add(imageFolder.getFileName());
                 }
             }
-            boolean isSaved= savedJobRepository.findByApplicantAndJob(applicant, jobPost) != null;
+            boolean isSaved=false;
+            boolean isApplied=false;
+            if(applicant!=null)isSaved= savedJobRepository.findByApplicantAndJob(applicant, jobPost) != null;
             int totalSaved = savedJobRepository.countByJob(jobPost);
-            boolean isApplied= applicationRepository.findByApplicant(applicant)
+            if(applicant!=null)isApplied= applicationRepository.findByApplicant(applicant)
                     .stream()
                     .anyMatch(application -> application.getJob().getId().equals(jobPost.getId()));
             Map<String, Object> postData = new HashMap<>();
@@ -96,5 +92,25 @@ public class PostService {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-
+    public ResponseEntity<?> deletePost(String token, String postId) {
+        Map<String, Object> response = new HashMap<>();
+        if (!jwtUtil.checkPermission(token, "Admin")&&
+                !jwtUtil.checkPermission(token, "Employer")) {
+            System.out.println("Unauthorized access attempt with token: " + token);
+            response.put("status", "fail");
+            response.put("message", "bạn không có quyền truy cập");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        JobPost jobPost = jobPostRepository.findById(postId).orElse(null);
+        if (jobPost == null) {
+            response.put("status", "fail");
+            response.put("message", "Bài đăng không tồn tại");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        jobPostRepository.delete(jobPost);
+        savedJobRepository.deleteAll(savedJobRepository.findByJob(jobPost));
+        response.put("status", "success");
+        response.put("message", "Xóa bài đăng thành công");
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

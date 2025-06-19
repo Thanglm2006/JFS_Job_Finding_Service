@@ -77,8 +77,13 @@ create table job_post(
     workspace_picture text,
     created_at timestamp not null default now()
 );
+-- CREATE EXTENSION IF NOT EXISTS pgroonga;
+-- CREATE INDEX pgroonga_index ON job_post USING pgroonga ((title || ' ' || description));
+--SELECT * FROM job_post WHERE (title || ' ' || description) &@~ 'software engineer';
+
+
 create table pending_job_post(
-    id text primary key,
+    id serial primary key,
     title text not null,
     employer_id text references employer(id) on delete cascade,
     description jsonB not null check (description ? 'location'),

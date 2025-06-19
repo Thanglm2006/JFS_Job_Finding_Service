@@ -16,7 +16,7 @@ public class PendingJobPost {
     @Getter
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private String id;
+    private long id;
 
     @Column(nullable = false)
     private String title;

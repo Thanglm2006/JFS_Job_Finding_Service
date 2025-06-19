@@ -70,6 +70,15 @@ public class AuthController {
             return ResponseEntity.status(401).body(e.getMessage());
         }
     }
+    @PostMapping("/register/admin")
+    @Operation(summary = "Admin Registration", description = "Register a new admin with email, password, name, and secret pass.")
+    public ResponseEntity<?> AdminRegister(@RequestBody Map<String, String> body) {
+        String secretPass = body.get("secretPass");
+        String fullName = body.get("fullName");
+        String email = body.get("email");
+        String password = body.get("password");
+        return adminService.addAdmin(secretPass, fullName, email, password);
+    }
     @PostMapping("/checkEmail")
     @Operation(summary = "check whether the email is already used")
     public ResponseEntity<?> checkEmail(@RequestBody Map<String, Object> body ) {

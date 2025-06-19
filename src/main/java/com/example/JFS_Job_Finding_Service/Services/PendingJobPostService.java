@@ -63,7 +63,7 @@ public class PendingJobPostService {
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
-    public ResponseEntity<?> acceptPost(String token, String pendingId){
+    public ResponseEntity<?> acceptPost(String token, long pendingId){
         if(!jwtUtil.checkPermission(token, "Admin"))
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền truy cập");
         PendingJobPost pendingJobPost= pendingJobPostRepository.findById(pendingId).orElse(null);
@@ -83,9 +83,12 @@ public class PendingJobPostService {
         notification.setMessage("Bài đăng của bạn đã được duyệt: " + jobPost.getTitle());
         notification.setRead(false);
         notificationRepository.save(notification);
-        return ResponseEntity.ok("Bài đăng đã được duyệt thành công");
+        Map<String, Object> response = new HashMap<>();
+        response.put("jobPostId", jobPost.getId());
+        response.put("status", "success");
+        return ResponseEntity.ok(response);
     }
-    public ResponseEntity<?> rejectPost(String token, String pendingId){
+    public ResponseEntity<?> rejectPost(String token, long pendingId){
         if(!jwtUtil.checkPermission(token, "Admin"))
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền truy cập");
         PendingJobPost pendingJobPost= pendingJobPostRepository.findById(pendingId).orElse(null);

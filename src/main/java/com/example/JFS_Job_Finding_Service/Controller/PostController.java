@@ -88,7 +88,7 @@ public class PostController {
     @Operation(summary = "reject a post, only admin can do this")
     public ResponseEntity<?> rejectPost(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("pendingId") String pendingId
+            @RequestParam("pendingId") long pendingId
     ) {
         try {
             return pendingJobPostService.rejectPost(headers.getFirst("token"), pendingId);
@@ -100,12 +100,24 @@ public class PostController {
     @Operation(summary = "accept a post, only admin can do this")
     public ResponseEntity<?> acceptPost(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("pendingId") String pendingId
+            @RequestParam("pendingId") long pendingId
     ) {
         try {
             return pendingJobPostService.acceptPost(headers.getFirst("token"), pendingId);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error accepting post: " + e.getMessage());
+        }
+    }
+    @PostMapping("/deletePost")
+    @Operation(summary = "delete a post, only admin and employer can do this")
+    public ResponseEntity<?> deletePost(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam("jobId") String jobId
+    ) {
+        try {
+            return postService.deletePost(headers.getFirst("token"), jobId);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error deleting post: " + e.getMessage());
         }
     }
     @GetMapping("/savePost")
