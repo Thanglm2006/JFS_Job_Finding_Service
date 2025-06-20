@@ -20,7 +20,8 @@ CREATE TABLE users(
     date_of_birth DATE,
     role TEXT CHECK (role IN ('Employer', 'Applicant')) NOT NULL,
     avatar_url TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT TRUE
 );
 
 create table employer(

@@ -38,6 +38,8 @@ public class User {
     private String role;
 
     private String avatarUrl;
+    @Column(nullable = false)
+    private boolean isActive = true;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

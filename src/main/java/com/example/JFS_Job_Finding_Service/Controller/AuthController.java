@@ -21,7 +21,6 @@ public class AuthController {
     @PostMapping("/register/employer")
     @Operation(summary = "User Registration", description = "Register a new user with email, password, name, and role.")
     public ResponseEntity<?> EmployerRegister(@RequestBody EmployerRegisterRequest employerRegisterRequest) {
-        System.out.println(employerRegisterRequest.toString());
         return userService.EmployerRegister(
                 employerRegisterRequest.getEmail(),
                 employerRegisterRequest.getPassword(), employerRegisterRequest.getRetypePass(),

@@ -93,6 +93,12 @@ public class UserService {
             response.put("message", "Sai mật khẩu!");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
+        if(!user.get().isActive()){
+            Map<String, Object> response = new HashMap<>();
+            response.put("error", "User is banned");
+            response.put("message", "Tài khoản của bạn đã bị đình chỉ!");
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+        }
         Optional<Employer> u=employerRepository.findByUser(user.get());
         String token=jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
         Map<String, Object> response = new HashMap<>();
@@ -155,6 +161,12 @@ public class UserService {
             response.put("error", "Invalid password");
             response.put("message", "Sai mật khẩu!");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        if(!user.get().isActive()){
+            Map<String, Object> response = new HashMap<>();
+            response.put("error", "User is banned");
+            response.put("message", "Tài khoản của bạn đã bị đình chỉ!");
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
         Optional<Applicant> u=applicantRepository.findByUser(user.get());
         String token=jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
