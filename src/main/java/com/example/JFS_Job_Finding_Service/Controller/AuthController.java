@@ -1,8 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Controller;
-import com.example.JFS_Job_Finding_Service.DTO.ApplicantRegisterRequest;
-import com.example.JFS_Job_Finding_Service.DTO.CheckPassRequest;
-import com.example.JFS_Job_Finding_Service.DTO.LoginRequest;
-import com.example.JFS_Job_Finding_Service.DTO.EmployerRegisterRequest;
+import com.example.JFS_Job_Finding_Service.DTO.*;
 import com.example.JFS_Job_Finding_Service.Services.AdminService;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -110,6 +107,15 @@ public class AuthController {
     public ResponseEntity<?> getProfile(@RequestHeader HttpHeaders headers, @RequestParam("userId") Long userId) {
         if(headers!=null && headers.get("token")!=null){
             return userService.getProfile(headers.getFirst("token"), userId);
+        }else{
+            return ResponseEntity.status(401).body("Token is null");
+        }
+    }
+    @PostMapping("/updateProfile")
+    @Operation(summary = "update profile information")
+    public ResponseEntity<?> updateProfile(@RequestHeader HttpHeaders headers, @RequestBody UpdateProfile body) {
+        if(headers!=null && headers.get("token")!=null){
+            return userService.updateProfile(headers.getFirst("token"), body);
         }else{
             return ResponseEntity.status(401).body("Token is null");
         }

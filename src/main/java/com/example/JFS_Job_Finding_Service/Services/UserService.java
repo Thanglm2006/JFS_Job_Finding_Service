@@ -1,4 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Services;
+import com.example.JFS_Job_Finding_Service.DTO.UpdateProfile;
 import com.example.JFS_Job_Finding_Service.models.Applicant;
 import com.example.JFS_Job_Finding_Service.models.Employer;
 import com.example.JFS_Job_Finding_Service.models.employer_type;
@@ -245,6 +246,50 @@ public class UserService {
             response.put("status", "fail");
             response.put("message", "Invalid user role");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+    }
+    public ResponseEntity<?> updateProfile(String token, UpdateProfile dto) {
+        boolean check=jwtUtil.validateToken(token);
+        if(!check){
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "fail");
+            response.put("message", "Unauthorized access");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        boolean isApplicant=jwtUtil.checkWhetherIsApplicant(token);
+        Optional<User> user = userRepository.findByEmail(jwtUtil.extractEmail(token));
+        if(user.isEmpty()){
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "fail");
+            response.put("message", "User not found");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        if(isApplicant){
+            Applicant applicant = applicantRepository.findByUser(user.get()).orElseThrow(() -> new RuntimeException("Applicant not found"));
+            applicant.getUser().setFullName(dto.getName());
+            applicant.getUser().setPhone(dto.getPhoneNumber());
+            applicant.getUser().setAddress(dto.getLocation());
+            applicant.getUser().setDateOfBirth(dto.getDateOfBirth());
+            applicant.setResume(dto.getResume());
+            userRepository.save(user.get());
+            applicantRepository.save(applicant);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Profile updated successfully");
+            return ResponseEntity.ok(response);
+        } else {
+            Map<String, Object> response = new HashMap<>();
+            Employer employer = employerRepository.findByUser(user.get()).orElseThrow(() -> new RuntimeException("Employer not found"));
+            employer.getUser().setFullName(dto.getName());
+            employer.getUser().setPhone(dto.getPhoneNumber());
+            employer.getUser().setAddress(dto.getLocation());
+            employer.getUser().setDateOfBirth(dto.getDateOfBirth());
+            employer.setType(employer_type.valueOf(dto.getEmployerType()));
+            userRepository.save(user.get());
+            employerRepository.save(employer);
+            response.put("status", "success");
+            response.put("message", "Profile updated successfully");
+            return ResponseEntity.ok(response);
         }
     }
     public ResponseEntity<?> checkEmail(String email) {

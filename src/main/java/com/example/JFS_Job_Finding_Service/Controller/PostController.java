@@ -181,5 +181,18 @@ public class PostController {
             return ResponseEntity.status(500).body("Error fetching saved posts: " + e.getMessage());
         }
     }
+    @GetMapping("/getAppliedPosts")
+    @Operation(summary = "get applied posts, only applicant can do this")
+    public ResponseEntity<?> getAppliedPosts(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
+    ) {
+        try {
+            return postService.getAppliedJobs(headers.getFirst("token"), page, size);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching applied posts: " + e.getMessage());
+        }
+    }
 
 }

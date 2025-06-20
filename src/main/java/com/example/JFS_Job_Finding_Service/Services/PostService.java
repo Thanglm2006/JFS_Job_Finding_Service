@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.DTO.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.Applicant;
+import com.example.JFS_Job_Finding_Service.models.Application;
 import com.example.JFS_Job_Finding_Service.models.ImageFolders;
 import com.example.JFS_Job_Finding_Service.models.JobPost;
 import com.example.JFS_Job_Finding_Service.repository.*;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class PostService {
@@ -35,7 +37,6 @@ public class PostService {
     private ApplicantRepository applicantRepository;
     @Autowired
     private ApplicationRepository applicationRepository;
-
 
     public ResponseEntity<?> getSomePosts(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
@@ -111,6 +112,48 @@ public class PostService {
         savedJobRepository.deleteAll(savedJobRepository.findByJob(jobPost));
         response.put("status", "success");
         response.put("message", "Xóa bài đăng thành công");
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    public ResponseEntity<?> getAppliedJobs(String token, int page, int size) {
+    Map<String, Object> response = new HashMap<>();
+        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            response.put("status", "fail");
+            response.put("message", "bạn không có quyền truy cập");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        Applicant applicant = jwtUtil.getApplicant(token);
+        if (applicant == null) {
+            response.put("status", "fail");
+            response.put("message", "Người dùng không phải là ứng viên");
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Application> applicationPage = applicationRepository.findByApplicant(applicant, pageable);
+        List<Map<String, Object>> applications = applicationPage.getContent().stream().map(application -> {
+            JobPost jobPost = application.getJob();
+            Map<String, Object> applicationData = new HashMap<>();
+            applicationData.put("applicationId", application.getId());
+            applicationData.put("jobId", jobPost.getId());
+            applicationData.put("jobTitle", jobPost.getTitle());
+            applicationData.put("jobDescription", jobPost.getDescription());
+            applicationData.put("jobCreatedAt", jobPost.getCreatedAt());
+            applicationData.put("applicantId", applicant.getId());
+            applicationData.put("workspacePicture", jobPost.getWorkspacePicture());
+            applicationData.put("jobEmployerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
+            applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown");
+            applicationData.put("status", application.getStatus());
+            applicationData.put("appliedAt", application.getAppliedAt());
+            applicationData.put("applicantName", applicant.getUser().getFullName());
+            applicationData.put("employerAvatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
+            return applicationData;
+        }).toList();
+        response.put("status", "success");
+        response.put("applications", applications);
+        response.put("totalPages", applicationPage.getTotalPages());
+        response.put("currentPage", applicationPage.getNumber());
+        response.put("totalApplications", applicationPage.getTotalElements());
+        response.put("totalApplicationsCount", applicationPage.getTotalElements());
+        response.put("pageSize", applicationPage.getSize());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

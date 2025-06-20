@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 public class ApplicationController {
     @Autowired
     private ApplicationService applicationService;
-
     @PostMapping("/apply")
     public ResponseEntity<?> applyForJob(
             @RequestHeader HttpHeaders headers,

@@ -82,7 +82,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         switch (type) {
             case "text":
-
                 chatService.saveMessage(Long.parseLong(senderId), Long.parseLong(recipient), content);
                 if (recipientSession != null && recipientSession.isOpen()) {
                     recipientSession.sendMessage(new TextMessage(mapper.writeValueAsString(Map.of(
@@ -96,12 +95,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             case "image":
                 String base64Data = content.split(",")[1];
                 byte[] imageBytes = Base64.getDecoder().decode(base64Data);
-
                 // Write to a temporary file
                 Path tempFilePath = Files.createTempFile("upload-", Instant.now().toString());
                 Files.write(tempFilePath, imageBytes);
                 File tempFile = tempFilePath.toFile();
-
                 String url = cloudinaryService.uploadFile(tempFile);
                 chatService.saveImage(Long.parseLong(senderId), Long.parseLong(recipient), url);
                 if (recipientSession != null && recipientSession.isOpen()) {
@@ -113,13 +110,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 }
                 tempFile.delete();
                 break;
-
             default:
                 System.out.println("Unknown message type: " + type);
         }
     }
-
-
     private String getId(WebSocketSession session) {
         return session.getUri().getQuery().split("=")[1];
     }
