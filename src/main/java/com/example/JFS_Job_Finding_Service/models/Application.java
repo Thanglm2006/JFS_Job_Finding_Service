@@ -28,15 +28,18 @@ public class Application {
 
     @Column(nullable = false, updatable = false)
     private Instant appliedAt= Instant.now();
-
-    public Application(JobPost job, Applicant applicant, String status) {
+    @Column(nullable = false, updatable = true)
+    private String position;
+    public Application(JobPost job, Applicant applicant, String status, String position) {
         this.job = job;
         this.applicant = applicant;
         this.status = status;
+        this.position= position;
     }
 
-    public Application(JobPost job, Applicant applicant) {
+    public Application(JobPost job, Applicant applicant, String position) {
         this.job = job;
         this.applicant = applicant;
+        this.position = position;
     }
 }

@@ -16,9 +16,10 @@ public class ApplicationController {
     @PostMapping("/apply")
     public ResponseEntity<?> applyForJob(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("jobId") String jobId
+            @RequestParam("jobId") String jobId,
+            @RequestParam("position") String position
     ) {
-        return applicationService.applyForJob(headers.getFirst("token"), jobId);
+        return applicationService.applyForJob(headers.getFirst("token"), jobId, position);
     }
     @PostMapping("/accept")
     public ResponseEntity<?> acceptApplication(

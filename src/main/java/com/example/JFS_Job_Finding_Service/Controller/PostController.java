@@ -148,10 +148,11 @@ public class PostController {
     @Operation(summary = "apply for a post, only applicant can do this")
     public ResponseEntity<?> apply(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("jobId") String jobId
+            @RequestParam("jobId") String jobId,
+            @RequestParam("position") String position
     ) {
         try {
-            return applicationService.applyForJob(headers.getFirst("token"), jobId);
+            return applicationService.applyForJob(headers.getFirst("token"), jobId,position);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error applying for post: " + e.getMessage());
         }

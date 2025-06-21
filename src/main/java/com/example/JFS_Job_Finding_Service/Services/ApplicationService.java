@@ -28,7 +28,7 @@ public class ApplicationService {
     @Autowired
     private NotificationRepository notificationRepository;
 
-    public ResponseEntity<?> applyForJob(String token, String jobId) {
+    public ResponseEntity<?> applyForJob(String token, String jobId, String position) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
@@ -38,7 +38,7 @@ public class ApplicationService {
         Applicant applicant = jwtUtil.getApplicant(token);
         JobPost job= jobPostRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
-        Application application = new Application(job, applicant);
+        Application application = new Application(job, applicant,position);
         application.setAppliedAt(java.time.Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
@@ -155,10 +155,10 @@ public class ApplicationService {
             applicationData.put("applicationId", application.getId());
             applicationData.put("applicantName", application.getApplicant().getUser().getFullName());
             applicationData.put("status", application.getStatus());
+            applicationData.put("resume", application.getApplicant().getResume());
             applicationData.put("appliedAt", application.getAppliedAt());
             applicationData.put("applicantId", application.getApplicant().getId());
-            applicationData.put("jobId", jobPost.getId());
-            applicationData.put("jobTitle", jobPost.getTitle());
+            applicationData.put("jobPost",jobPost);
             applicationData.put("avatar", application.getApplicant().getUser().getAvatarUrl());
             return applicationData;
         }).filter(Objects::nonNull)

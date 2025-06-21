@@ -159,6 +159,7 @@ CREATE TABLE applications(
     job_id TEXT NOT NULL REFERENCES job_post(id) ON DELETE CASCADE,
     applicant_id text NOT NULL REFERENCES applicant(id) ON DELETE CASCADE,
     status TEXT CHECK (status IN ('Pending', 'Reviewed', 'Accepted', 'Rejected')) DEFAULT 'Pending',
+    position TEXT NOT NULL,
     applied_at TIMESTAMP DEFAULT NOW()
 );
 CREATE TABLE saved_jobs (
