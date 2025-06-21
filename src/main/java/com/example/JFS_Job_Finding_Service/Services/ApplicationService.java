@@ -160,6 +160,7 @@ public class ApplicationService {
             applicationData.put("applicantName", application.getApplicant().getUser().getFullName());
             applicationData.put("status", application.getStatus());
             applicationData.put("resume", application.getApplicant().getResume());
+            applicationData.put("position", application.getPosition());
             applicationData.put("appliedAt", application.getAppliedAt());
             applicationData.put("applicantId", application.getApplicant().getId());
             applicationData.put("jobPost",jobPost);
