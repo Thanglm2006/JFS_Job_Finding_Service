@@ -1,9 +1,11 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.models.Applicant;
+import com.example.JFS_Job_Finding_Service.models.ImageFolders;
 import com.example.JFS_Job_Finding_Service.models.JobPost;
 import com.example.JFS_Job_Finding_Service.models.SavedJob;
 import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
+import com.example.JFS_Job_Finding_Service.repository.ImageFoldersRepository;
 import com.example.JFS_Job_Finding_Service.repository.JobPostRepository;
 import com.example.JFS_Job_Finding_Service.repository.SavedJobRepository;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
@@ -29,6 +31,11 @@ public class SavedJobService {
     JwtUtil jwtUtil;
     @Autowired
     private JobPostRepository jobPostRepository;
+    @Autowired
+    private ApplicantRepository applicantRepository;
+    @Autowired
+    private ImageFoldersRepository imageFoldersRepository;
+
 
     public ResponseEntity<?> saveJob(String token, String jobId) {
 
@@ -107,16 +114,28 @@ public class SavedJobService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "SavedAt"));
         Page<SavedJob> savedJobsPage = savedJobRepository.findByApplicant(applicant, pageable);
         List<Map<String, Object>> posts= savedJobsPage.getContent().stream().map(savedJob -> {
+            List<ImageFolders> folder = List.of();
+            List<String> pics = new java.util.ArrayList<>(List.of());
+            if (savedJob.getJob().getWorkspacePicture() != null) {
+                folder = imageFoldersRepository.findByFolderName(savedJob.getJob().getWorkspacePicture());
+            }
+            for( ImageFolders imageFolder : folder){
+                if(imageFolder.getFolderName().equals(savedJob.getJob().getWorkspacePicture())){
+                    pics.add(imageFolder.getFileName());
+                }
+            }
             JobPost jobPost = savedJob.getJob();
             Map<String, Object> postData = new HashMap<>();
             postData.put("id", jobPost.getId());
             postData.put("title", jobPost.getTitle());
             postData.put("description", jobPost.getDescription());
             postData.put("createdAt", jobPost.getCreatedAt());
+            postData.put("savedAt", savedJob.getSavedAt());
             postData.put("isSaved", true);
+
             postData.put("employerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown");
             postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
-            postData.put("workspacePicture", jobPost.getWorkspacePicture() != null ? jobPost.getWorkspacePicture() : "No picture available");
+            postData.put("workspacePicture", pics.toArray());
             return postData;
         }).toList();
         response.put("status", "success");
