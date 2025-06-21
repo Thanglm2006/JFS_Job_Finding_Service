@@ -140,6 +140,7 @@ public class PendingJobPostService {
             postData.put("id", pendingJobPost.getId());
             postData.put("title", pendingJobPost.getTitle());
             postData.put("employerName", employerName);
+            postData.put("employer", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getId() : null);
             postData.put("userId", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getUser().getId() : null);
             postData.put("description", pendingJobPost.getDescription());
             postData.put("avatar", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getUser().getAvatarUrl() : null);
