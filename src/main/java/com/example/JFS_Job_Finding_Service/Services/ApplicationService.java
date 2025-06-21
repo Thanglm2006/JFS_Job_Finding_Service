@@ -35,10 +35,14 @@ public class ApplicationService {
         if(!jwtUtil.checkWhetherIsApplicant(token)) {
             return ResponseEntity.status(403).body("You do not have permission to apply for jobs");
         }
+        if(position!= null && position.isEmpty()|| position.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Position cannot be empty");
+        }
+        String finalPosition = position.replace("_"," ");
         Applicant applicant = jwtUtil.getApplicant(token);
         JobPost job= jobPostRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
-        Application application = new Application(job, applicant,position);
+        Application application = new Application(job, applicant,finalPosition);
         application.setAppliedAt(java.time.Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
