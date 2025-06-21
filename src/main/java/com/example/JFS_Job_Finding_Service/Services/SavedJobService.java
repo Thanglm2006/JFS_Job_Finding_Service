@@ -132,7 +132,7 @@ public class SavedJobService {
             postData.put("createdAt", jobPost.getCreatedAt());
             postData.put("savedAt", savedJob.getSavedAt());
             postData.put("isSaved", true);
-
+            postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
             postData.put("employerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown");
             postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
             postData.put("workspacePicture", pics.toArray());
