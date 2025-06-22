@@ -1,10 +1,7 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.DTO.PostingRequest;
-import com.example.JFS_Job_Finding_Service.models.Applicant;
-import com.example.JFS_Job_Finding_Service.models.Application;
-import com.example.JFS_Job_Finding_Service.models.ImageFolders;
-import com.example.JFS_Job_Finding_Service.models.JobPost;
+import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +34,8 @@ public class PostService {
     private ApplicantRepository applicantRepository;
     @Autowired
     private ApplicationRepository applicationRepository;
+    @Autowired
+    private EmployerRepository employerRepository;
 
     public ResponseEntity<?> getSomePosts(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
@@ -85,6 +84,55 @@ public class PostService {
             return postData;
         }).toList();
 
+        response.put("status", "success");
+        response.put("message", "Lấy danh sách bài đăng thành công");
+        response.put("posts", posts);
+        response.put("totalPages", jobPostsPage.getTotalPages());
+        response.put("currentPage", jobPostsPage.getNumber());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    public ResponseEntity<?> getSomePostOfEmployer(String token, int page, int size) {
+        Map<String, Object> response = new HashMap<>();
+        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            response.put("status", "fail");
+            response.put("message", "bạn không có quyền truy cập");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Employer employerOptional = jwtUtil.getEmployer(token);
+        if (employerOptional == null) {
+            response.put("status", "fail");
+            response.put("message", "Người dùng không phải là nhà tuyển dụng");
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+        }
+        Page<JobPost> jobPostsPage = jobPostRepository.findByEmployer(employerOptional, pageable);
+        List<Map<String, Object>> posts = jobPostsPage.getContent().stream().map(jobPost -> {
+            List<ImageFolders> folder = List.of();
+            List<String> pics = new java.util.ArrayList<>(List.of());
+            if (jobPost.getWorkspacePicture() != null) {
+                folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
+            }
+            for( ImageFolders imageFolder : folder){
+                if(imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())){
+                    pics.add(imageFolder.getFileName());
+                }
+            }
+            Map<String, Object> postData = new HashMap<>();
+            postData.put("id", jobPost.getId());
+            postData.put("title", jobPost.getTitle());
+            postData.put("employerName", employerOptional.getFullName());
+            postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
+            postData.put("isSaved", true);
+            postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
+            postData.put("description", jobPost.getDescription());
+            postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
+            postData.put("workspacePicture", pics.toArray());
+            postData.put("createdAt", jobPost.getCreatedAt());
+            postData.put("totalSaved", savedJobRepository.countByJob(jobPost));
+            postData.put("isApplied", false);
+            return postData;
+        }).toList();
         response.put("status", "success");
         response.put("message", "Lấy danh sách bài đăng thành công");
         response.put("posts", posts);

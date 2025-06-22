@@ -84,6 +84,19 @@ public class PostController {
             return ResponseEntity.status(500).body("Error fetching pending posts: " + e.getMessage());
         }
     }
+    @GetMapping("/getSomePostsOfEmployer")
+    @Operation(summary = "select 10 posts per time for employer")
+    public ResponseEntity<?> getSomePostsForEmployer(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
+    ) {
+        try {
+            return postService.getSomePostOfEmployer(headers.getFirst("token"), page, size);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching posts for employer: " + e.getMessage());
+        }
+    }
     @PostMapping("/rejectPost")
     @Operation(summary = "reject a post, only admin can do this")
     public ResponseEntity<?> rejectPost(
