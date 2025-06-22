@@ -227,6 +227,7 @@ public class UserService {
         response.put("avatar", user.get().getAvatarUrl());
         response.put("createdAt", user.get().getCreatedAt());
         response.put("email", user.get().getEmail());
+        response.put("name", user.get().getFullName());
 
         if(user.get().getRole().equals("Applicant")){
             Optional<Applicant> applicant = applicantRepository.findByUser(user.get());
@@ -251,7 +252,7 @@ public class UserService {
             response.put("status", "success");
             response.put("role", "Employer");
             response.put("employerId", employer.get().getId());
-            response.put("resume", employer.get().getType());
+            response.put("organization", employer.get().getType());
 
             return ResponseEntity.ok(response);
         } else {
