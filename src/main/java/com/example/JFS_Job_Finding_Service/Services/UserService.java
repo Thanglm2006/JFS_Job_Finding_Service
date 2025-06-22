@@ -312,10 +312,12 @@ public class UserService {
             applicant.getUser().setFullName(dto.getName());
             applicant.getUser().setPhone(dto.getPhoneNumber());
             applicant.getUser().setAddress(dto.getLocation());
+            applicant.getUser().setGender(dto.getGender());
             applicant.getUser().setDateOfBirth(dto.getDateOfBirth());
             applicant.setResume(dto.getResume());
             userRepository.save(user.get());
             applicantRepository.save(applicant);
+            System.out.println(applicant);
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Profile updated successfully");
@@ -325,9 +327,11 @@ public class UserService {
             Employer employer = employerRepository.findByUser(user.get()).orElseThrow(() -> new RuntimeException("Employer not found"));
             employer.getUser().setFullName(dto.getName());
             employer.getUser().setPhone(dto.getPhoneNumber());
+            employer.getUser().setGender(dto.getGender());
             employer.getUser().setAddress(dto.getLocation());
             employer.getUser().setDateOfBirth(dto.getDateOfBirth());
             employer.setType(employer_type.valueOf(dto.getEmployerType()));
+            System.out.println(employer);
             userRepository.save(user.get());
             employerRepository.save(employer);
             response.put("status", "success");

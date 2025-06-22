@@ -17,10 +17,10 @@ import java.util.Map;
 public class UpdateProfile {
     private String name;
     private String phoneNumber;
-    private String role;
     private String location;
     private String profilePictureUrl;
     private String employerType;
+    private String gender;
     private Date dateOfBirth;
     private Map<String,Object> resume;
     private Instant updatedAt = Instant.now();
@@ -31,11 +31,11 @@ public class UpdateProfile {
         this.phoneNumber = phoneNumber;
         this.location = location;
     }
-    public UpdateProfile(String name, String phoneNumber, String location, String profilePictureUrl) {
+    public UpdateProfile(String name, String phoneNumber, String location, String gender) {
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.location = location;
-        this.profilePictureUrl = profilePictureUrl;
+        this.gender = gender;
     }
     public UpdateProfile(String name, String phoneNumber, String location, String profilePictureUrl, String employerType) {
         this.name = name;
