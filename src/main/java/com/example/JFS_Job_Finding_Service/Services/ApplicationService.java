@@ -1,10 +1,7 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.models.*;
-import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
-import com.example.JFS_Job_Finding_Service.repository.ApplicationRepository;
-import com.example.JFS_Job_Finding_Service.repository.JobPostRepository;
-import com.example.JFS_Job_Finding_Service.repository.NotificationRepository;
+import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +24,10 @@ public class ApplicationService {
     private ApplicantRepository applicantRepository;
     @Autowired
     private NotificationRepository notificationRepository;
+    @Autowired
+    private SavedJobRepository savedJobRepository;
+    @Autowired
+    private ImageFoldersRepository imageFoldersRepository;
 
     public ResponseEntity<?> applyForJob(String token, String jobId, String position) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
@@ -155,7 +156,35 @@ public class ApplicationService {
             if (application == null) {
                 return null;
             }
-            Map<String, Object> applicationData = new HashMap<>();
+            Applicant applicant = application.getApplicant();
+                    String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
+                    List<ImageFolders> folder = List.of();
+                    List<String> pics = new java.util.ArrayList<>(List.of());
+                    if (jobPost.getWorkspacePicture() != null) {
+                        folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
+                    }
+                    for( ImageFolders imageFolder : folder){
+                        if(imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())){
+                            pics.add(imageFolder.getFileName());
+                        }
+                    }
+                    boolean isSaved=false;
+                    boolean isApplied=true;
+                    if(applicant!=null)isSaved= savedJobRepository.findByApplicantAndJob(applicant, jobPost) != null;
+                    int totalSaved = savedJobRepository.countByJob(jobPost);            Map<String, Object> applicationData = new HashMap<>();
+                    Map<String, Object> postData = new HashMap<>();
+                    postData.put("id", jobPost.getId());
+                    postData.put("title", jobPost.getTitle());
+                    postData.put("employerName", employerName);
+                    postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
+                    postData.put("isSaved", isSaved);
+                    postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
+                    postData.put("description", jobPost.getDescription());
+                    postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
+                    postData.put("workspacePicture", pics.toArray());
+                    postData.put("createdAt", jobPost.getCreatedAt());
+                    postData.put("totalSaved", totalSaved);
+                    postData.put("isApplied", isApplied);
             applicationData.put("applicationId", application.getId());
             applicationData.put("applicantName", application.getApplicant().getUser().getFullName());
             applicationData.put("status", application.getStatus());
@@ -163,8 +192,9 @@ public class ApplicationService {
             applicationData.put("position", application.getPosition());
             applicationData.put("appliedAt", application.getAppliedAt());
             applicationData.put("applicantId", application.getApplicant().getId());
-            applicationData.put("jobPost",jobPost);
+            applicationData.put("jobPost",postData);
             applicationData.put("avatar", application.getApplicant().getUser().getAvatarUrl());
+
             return applicationData;
         }).filter(Objects::nonNull)
                 .toList();
