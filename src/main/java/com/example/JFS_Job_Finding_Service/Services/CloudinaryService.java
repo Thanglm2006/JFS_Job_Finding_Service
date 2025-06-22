@@ -35,4 +35,8 @@ public class CloudinaryService {
         Map uploadResult = cloudinary.uploader().upload(file, ObjectUtils.asMap("folder", "messageIMGs"));
         return uploadResult.get("secure_url").toString();
     }
+    public String uploadFile(MultipartFile file) throws IOException {
+        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap("folder", "messageIMGs"));
+        return uploadResult.get("secure_url").toString();
+    }
 }

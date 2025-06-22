@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -115,6 +116,18 @@ public class AuthController {
     public ResponseEntity<?> updateProfile(@RequestHeader HttpHeaders headers, @RequestBody UpdateProfile body) {
         if(headers!=null && headers.get("token")!=null){
             return userService.updateProfile(headers.getFirst("token"), body);
+        }else{
+            return ResponseEntity.status(401).body("Token is null");
+        }
+    }
+    @PostMapping("/updateAvatar")
+    @Operation(summary = "update avatar")
+    public ResponseEntity<?> updateAvatar(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam(value = "avatar", required = false) MultipartFile avatar
+    ) {
+        if(headers!=null && headers.get("token")!=null){
+            return userService.updateAvatar(headers.getFirst("token"), avatar);
         }else{
             return ResponseEntity.status(401).body("Token is null");
         }

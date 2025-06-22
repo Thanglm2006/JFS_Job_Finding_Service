@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Date;
@@ -36,6 +37,9 @@ public class UserService {
     private ApplicantRepository applicantRepository;
     private PasswordEncoder passwordEncoder= PasswordConfig.passwordEncoder();
     private JwtUtil jwtUtil= new JwtUtil();
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     public User getUserById(long id){
         return userRepository.findById(id).orElse(null);
     }
@@ -206,6 +210,32 @@ public class UserService {
             response.put("message", "Token invalid");
             return ResponseEntity.ok(response);
         }
+    }
+    public ResponseEntity<?> updateAvatar(String token, MultipartFile file) {
+        Map<String, Object> response = new HashMap<>();
+        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            response.put("status", "fail");
+            response.put("message", "Unauthorized access");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        Optional<User> user = userRepository.findByEmail(jwtUtil.extractEmail(token));
+        if(user.isEmpty()){
+            response.put("status", "fail");
+            response.put("message", "User not found");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        try {
+            String avatarUrl = cloudinaryService.uploadFile(file);
+            user.get().setAvatarUrl(avatarUrl);
+            userRepository.save(user.get());
+            response.put("status", "success");
+            response.put("avatarUrl", avatarUrl);
+        } catch (Exception e) {
+            response.put("status", "fail");
+            response.put("message", "Failed to upload avatar: " + e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> getProfile(String token, Long userId) {
         Map<String, Object> response = new HashMap<>();
