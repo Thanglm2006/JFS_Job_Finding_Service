@@ -22,10 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -307,15 +304,40 @@ public class UserService {
             response.put("message", "User not found");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
+        if(dto.getName() == null || dto.getPhoneNumber() == null || dto.getLocation() == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "fail");
+            response.put("message", "Name, phone number, and location are required");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        List<String> validGender=new ArrayList<>();
+        validGender.add("Male"); validGender.add("Female"); validGender.add("Other"); validGender.add("Nam"); validGender.add("Nữ"); validGender.add("Khác");
+        //check whether dto.getGender() is valid ignore case
+        boolean checkGender=false;
+        for(String gender:validGender){
+            if(gender.equalsIgnoreCase(dto.getGender())){
+                checkGender=true;
+                break;
+            }
+        }
+        if(!checkGender){
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "fail");
+            response.put("message", "Invalid gender");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
         if(isApplicant){
             Applicant applicant = applicantRepository.findByUser(user.get()).orElseThrow(() -> new RuntimeException("Applicant not found"));
             applicant.getUser().setFullName(dto.getName());
             applicant.getUser().setPhone(dto.getPhoneNumber());
             applicant.getUser().setAddress(dto.getLocation());
+            System.out.println(dto.getLocation());
+            System.out.println(applicant.getUser().getAddress());
             applicant.getUser().setGender(dto.getGender());
             applicant.getUser().setDateOfBirth(dto.getDateOfBirth());
             applicant.setResume(dto.getResume());
-            userRepository.save(user.get());
+            userRepository.save(applicant.getUser());
             applicantRepository.save(applicant);
             System.out.println(applicant);
             Map<String, Object> response = new HashMap<>();
@@ -332,7 +354,7 @@ public class UserService {
             employer.getUser().setDateOfBirth(dto.getDateOfBirth());
             employer.setType(employer_type.valueOf(dto.getEmployerType()));
             System.out.println(employer);
-            userRepository.save(user.get());
+            userRepository.save(employer.getUser());
             employerRepository.save(employer);
             response.put("status", "success");
             response.put("message", "Profile updated successfully");
