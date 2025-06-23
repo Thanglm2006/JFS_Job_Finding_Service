@@ -104,6 +104,7 @@ public class ApplicationService {
             return ResponseEntity.status(400).body("Application already accepted");
         }
         application.setStatus("Accepted");
+        application.setAppliedAt(Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
@@ -338,6 +339,7 @@ public class ApplicationService {
             applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown");
             applicationData.put("employerAvatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
             applicationData.put("job",application.getPosition());
+            applicationData.put("acceptedAt", application.getAppliedAt());
             return applicationData;
         }).filter(Objects::nonNull).toList();
         response.put("status", "success");
