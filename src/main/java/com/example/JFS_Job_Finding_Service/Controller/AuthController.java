@@ -1,7 +1,9 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 import com.example.JFS_Job_Finding_Service.DTO.*;
 import com.example.JFS_Job_Finding_Service.Services.AdminService;
+import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
+import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +20,10 @@ public class AuthController {
     private UserService userService;
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private ApplicationService applicationService;
+    @Autowired
+    private ApplicantRepository applicantRepository;
 
     @PostMapping("/register/employer")
     @Operation(summary = "User Registration", description = "Register a new user with email, password, name, and role.")
@@ -30,7 +36,9 @@ public class AuthController {
 
     @PostMapping("/register/applicant")
     @Operation(summary = "User Registration", description = "Register a new user with email, password, name, and role.")
+
     public ResponseEntity<?> ApplicantRegister(@RequestBody ApplicantRegisterRequest applicantRegisterRequest) {
+        System.out.println(applicantRegisterRequest.getEmail());
         return userService.ApplicantRegister(
                 applicantRegisterRequest.getEmail(),
                 applicantRegisterRequest.getPassword(), applicantRegisterRequest.getRetypePass(),
