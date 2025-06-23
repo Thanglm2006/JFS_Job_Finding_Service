@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.Controller;
 
 import com.example.JFS_Job_Finding_Service.DTO.ApplicantResponse;
 import com.example.JFS_Job_Finding_Service.DTO.Schedule;
+import com.example.JFS_Job_Finding_Service.DTO.SetScheduleRequest;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -47,11 +48,9 @@ public class ApplicationController {
     @PostMapping("/setSchedule")
     public ResponseEntity<?> setSchedule(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("applicantId") String applicantId,
-            @RequestParam("jobId") String jobId,
-            @RequestParam("schedules") List<Schedule> schedules
-    ) {
-        return applicationService.setSchedule(headers.getFirst("token"), applicantId, jobId,schedules);
+            @RequestBody SetScheduleRequest setScheduleRequest
+            ) {
+        return applicationService.setSchedule(headers.getFirst("token"), setScheduleRequest.getApplicantId(), setScheduleRequest.getJobId(), setScheduleRequest.getSchedules());
     }
     @GetMapping("getStaffsForEmployer")
     public ResponseEntity<?> getStaffsForEmployer(
