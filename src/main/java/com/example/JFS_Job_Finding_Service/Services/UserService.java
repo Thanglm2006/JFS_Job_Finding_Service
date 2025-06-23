@@ -36,6 +36,8 @@ public class UserService {
     private JwtUtil jwtUtil= new JwtUtil();
     @Autowired
     private CloudinaryService cloudinaryService;
+    @Autowired
+    private MailService mailService;
 
     public User getUserById(long id){
         return userRepository.findById(id).orElse(null);
@@ -107,6 +109,8 @@ public class UserService {
         response.put("token", token);
         response.put("user", user.get());
         u.ifPresent(employer -> response.put("employer", employer));
+        mailService.sendSimpleEmail(email, "Login Notification",
+                "You have successfully logged in to your account on JFS Job Finding Service. If this was not you, please contact support immediately.");
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Date dateOfBirth, String gender) {
