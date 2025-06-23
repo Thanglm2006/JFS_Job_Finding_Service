@@ -157,7 +157,7 @@ public class ApplicationService {
         List<com.example.JFS_Job_Finding_Service.models.Schedule> existingSchedules = scheduleRepository.findByApplicant(applicant);
         List<com.example.JFS_Job_Finding_Service.models.Schedule> schedulesForJob = scheduleRepository.findByJob(job);
         if (schedulesForJob != null && !schedulesForJob.isEmpty()) {
-            scheduleRepository.deleteAll(existingSchedules);
+            scheduleRepository.deleteAll(schedulesForJob);
         }
         scheduleRepository.deleteAll(existingSchedules);
         for( Schedule schedule : schedules) {
