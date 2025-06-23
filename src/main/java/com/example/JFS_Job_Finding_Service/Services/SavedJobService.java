@@ -83,7 +83,7 @@ public class SavedJobService {
             response.put("message", "Job not found");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
-        SavedJob savedJob = savedJobRepository.findByApplicantAndJob(applicant, job);
+        SavedJob savedJob = savedJobRepository.findByApplicantAndJob(applicant, job).get(0);
         if (savedJob == null) {
             response.put("status", "fail");
             response.put("message", "Saved job not found");

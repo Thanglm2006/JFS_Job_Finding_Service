@@ -228,7 +228,7 @@ public class ApplicationService {
                 }
                 boolean isSaved = false;
                 boolean isApplied = true;
-                if (applicant != null) isSaved = savedJobRepository.findByApplicantAndJob(applicant, jobPost) != null;
+                if (applicant != null) isSaved = !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
                 int totalSaved = savedJobRepository.countByJob(jobPost);
                 Map<String, Object> applicationData = new HashMap<>();
                 Map<String, Object> postData = new HashMap<>();

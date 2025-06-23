@@ -63,7 +63,7 @@ public class PostService {
             }
             boolean isSaved=false;
             boolean isApplied=false;
-            if(applicant!=null)isSaved= savedJobRepository.findByApplicantAndJob(applicant, jobPost) != null;
+            if(applicant!=null)isSaved= !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
             int totalSaved = savedJobRepository.countByJob(jobPost);
             if(applicant!=null)isApplied= applicationRepository.findByApplicant(applicant)
                     .stream()
