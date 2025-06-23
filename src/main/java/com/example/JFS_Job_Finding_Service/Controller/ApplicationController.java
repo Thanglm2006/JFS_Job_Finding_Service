@@ -47,11 +47,11 @@ public class ApplicationController {
     @PostMapping("/setSchedule")
     public ResponseEntity<?> setSchedule(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("applicationId") String applicationId,
+            @RequestParam("applicantId") String applicantId,
             @RequestParam("jobId") String jobId,
             @RequestParam("schedules") List<Schedule> schedules
     ) {
-        return applicationService.setSchedule(headers.getFirst("token"), applicationId, jobId,schedules);
+        return applicationService.setSchedule(headers.getFirst("token"), applicantId, jobId,schedules);
     }
 
 }
