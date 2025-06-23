@@ -321,7 +321,7 @@ public class ApplicationService {
             response.put("message", "Người dùng không phải là ứng viên");
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "appliedAt"));
         Page<Application> applicationPage = applicationRepository.findByApplicant(applicant, pageable);
         List<Map<String, Object>> applications = applicationPage.getContent().stream().map(application -> {
             if(!application.getStatus().equalsIgnoreCase("Accepted")) {
