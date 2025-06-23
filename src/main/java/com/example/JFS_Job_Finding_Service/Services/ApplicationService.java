@@ -1,6 +1,7 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.models.*;
+import com.example.JFS_Job_Finding_Service.DTO.Schedule;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,8 @@ public class ApplicationService {
     private SavedJobRepository savedJobRepository;
     @Autowired
     private ImageFoldersRepository imageFoldersRepository;
+    @Autowired
+    private ScheduleRepository scheduleRepository;
 
     public ResponseEntity<?> applyForJob(String token, String jobId, String position) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
@@ -132,6 +135,47 @@ public class ApplicationService {
         notification.setCreatedAt(java.time.Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application rejected for applicant " + applicant.getUser().getFullName());
+    }
+    public ResponseEntity<?> setSchedule(String token,String applicantId, String jobId, List<Schedule> schedules) {
+        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(401).body("Unauthorized access");
+        }
+        if(!jwtUtil.checkWhetherIsEmployer(token)) {
+            return ResponseEntity.status(403).body("You do not have permission to set schedules");
+        }
+        Applicant applicant = applicantRepository.findById(applicantId)
+                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
+        JobPost job = jobPostRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+        List<com.example.JFS_Job_Finding_Service.models.Schedule> existingSchedules = scheduleRepository.findByApplicant(applicant);
+        for( Schedule schedule : schedules) {
+            if (schedule.getStartTime()>=(schedule.getEndTime())) {
+                return ResponseEntity.badRequest().body("Start time cannot be after end time");
+            }
+            if(schedule.getDay()!=null && !schedule.getDay().matches("^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$")) {
+                return ResponseEntity.badRequest().body("Invalid day of the week: " + schedule.getDay());
+            }
+            for( com.example.JFS_Job_Finding_Service.models.Schedule existingSchedule : existingSchedules) {
+                if (existingSchedule.getDay().equals(schedule.getDay()) &&
+                        ((schedule.getStartTime() >= existingSchedule.getStartTime() && schedule.getStartTime() <= existingSchedule.getEndTime()) ||
+                                (schedule.getEndTime() >= existingSchedule.getStartTime() && schedule.getEndTime() <= existingSchedule.getEndTime()))) {
+                    return ResponseEntity.badRequest().body("Schedule conflicts with existing schedule on " + schedule.getDay());
+                }
+            }
+            try{
+                com.example.JFS_Job_Finding_Service.models.Schedule scheduleModel = new com.example.JFS_Job_Finding_Service.models.Schedule();
+                scheduleModel.setApplicant(applicant);
+                scheduleModel.setJob(job);
+                scheduleModel.setStartTime(schedule.getStartTime());
+                scheduleModel.setEndTime(schedule.getEndTime());
+                scheduleModel.setDay(schedule.getDay());
+                scheduleModel.setDescription(schedule.getDescription());
+                scheduleRepository.save(scheduleModel);
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body("Schedule could not be saved, invalid schedule data");
+            }
+        }
+        return ResponseEntity.status(200).body("Application Schedule saved");
     }
     public ResponseEntity<?> getAllApplicationForEmployer(String token){
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
