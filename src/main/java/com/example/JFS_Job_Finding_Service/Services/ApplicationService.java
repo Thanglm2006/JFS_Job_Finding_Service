@@ -4,8 +4,14 @@ import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.DTO.Schedule;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.batch.BatchProperties;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -201,56 +207,174 @@ public class ApplicationService {
             response.put("message", "No job posts found for this employer");
             return ResponseEntity.ok(response);
         }
-        List<Map<String, Object>> applications = jobPosts.stream().map(jobPost -> {
-            Application application = applicationRepository.findByJob(jobPost);
-            if (application == null) {
-                return null;
-            }
-            Applicant applicant = application.getApplicant();
-                    String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
-                    List<ImageFolders> folder = List.of();
-                    List<String> pics = new ArrayList<>(List.of());
-                    if (jobPost.getWorkspacePicture() != null) {
-                        folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
+        List<Map<String, Object>> applications = jobPosts.stream().flatMap(jobPost -> {
+            List<Application> applicationsL = applicationRepository.findByJob(jobPost);
+            List<Map<String, Object>> applicationDataList = new ArrayList<>();
+            for(Application application : applicationsL) {
+                if (application == null) {
+                    continue;
+                }
+                Applicant applicant = application.getApplicant();
+                String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
+                List<ImageFolders> folder = List.of();
+                List<String> pics = new ArrayList<>(List.of());
+                if (jobPost.getWorkspacePicture() != null) {
+                    folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
+                }
+                for (ImageFolders imageFolder : folder) {
+                    if (imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())) {
+                        pics.add(imageFolder.getFileName());
                     }
-                    for( ImageFolders imageFolder : folder){
-                        if(imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())){
-                            pics.add(imageFolder.getFileName());
-                        }
-                    }
-                    boolean isSaved=false;
-                    boolean isApplied=true;
-                    if(applicant!=null)isSaved= savedJobRepository.findByApplicantAndJob(applicant, jobPost) != null;
-                    int totalSaved = savedJobRepository.countByJob(jobPost);            Map<String, Object> applicationData = new HashMap<>();
-                    Map<String, Object> postData = new HashMap<>();
-                    postData.put("id", jobPost.getId());
-                    postData.put("title", jobPost.getTitle());
-                    postData.put("employerName", employerName);
-                    postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
-                    postData.put("isSaved", isSaved);
-                    postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
-                    postData.put("description", jobPost.getDescription());
-                    postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
-                    postData.put("workspacePicture", pics.toArray());
-                    postData.put("createdAt", jobPost.getCreatedAt());
-                    postData.put("totalSaved", totalSaved);
-                    postData.put("isApplied", isApplied);
-            applicationData.put("applicationId", application.getId());
-            applicationData.put("applicantName", application.getApplicant().getUser().getFullName());
-            applicationData.put("status", application.getStatus());
-            applicationData.put("resume", application.getApplicant().getResume());
-            applicationData.put("position", application.getPosition());
-            applicationData.put("appliedAt", application.getAppliedAt());
-            applicationData.put("applicantId", application.getApplicant().getId());
-            applicationData.put("userId", application.getApplicant().getUser().getId());
-            applicationData.put("jobPost",postData);
-            applicationData.put("avatar", application.getApplicant().getUser().getAvatarUrl());
+                }
+                boolean isSaved = false;
+                boolean isApplied = true;
+                if (applicant != null) isSaved = savedJobRepository.findByApplicantAndJob(applicant, jobPost) != null;
+                int totalSaved = savedJobRepository.countByJob(jobPost);
+                Map<String, Object> applicationData = new HashMap<>();
+                Map<String, Object> postData = new HashMap<>();
+                postData.put("id", jobPost.getId());
+                postData.put("title", jobPost.getTitle());
+                postData.put("employerName", employerName);
+                postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
+                postData.put("isSaved", isSaved);
+                postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
+                postData.put("description", jobPost.getDescription());
+                postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
+                postData.put("workspacePicture", pics.toArray());
+                postData.put("createdAt", jobPost.getCreatedAt());
+                postData.put("totalSaved", totalSaved);
+                postData.put("isApplied", isApplied);
+                applicationData.put("applicationId", application.getId());
+                applicationData.put("applicantName", application.getApplicant().getUser().getFullName());
+                applicationData.put("status", application.getStatus());
+                applicationData.put("resume", application.getApplicant().getResume());
+                applicationData.put("position", application.getPosition());
+                applicationData.put("appliedAt", application.getAppliedAt());
+                applicationData.put("applicantId", application.getApplicant().getId());
+                applicationData.put("userId", application.getApplicant().getUser().getId());
+                applicationData.put("jobPost", postData);
+                applicationData.put("avatar", application.getApplicant().getUser().getAvatarUrl());
 
-            return applicationData;
-        }).filter(Objects::nonNull)
-                .toList();
+                applicationDataList.add(applicationData);
+            }
+            return applicationDataList.stream();
+        }).filter(Objects::nonNull).toList();
         response.put("status", "success");
         response.put("applications", applications);
+        return ResponseEntity.ok(response);
+    }
+    public ResponseEntity<?> getStaffsForEmployer(String token){
+        HashMap<String, Object> response = new HashMap<>();
+        if(!jwtUtil.checkPermission(token, "Employer")){
+            response.put("status", "fail");
+            response.put("message", "You do not have permission to view staffs");
+            return ResponseEntity.status(403).body(response);
+        }
+        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            response.put("status", "fail");
+            response.put("message", "Unauthorized access");
+            return ResponseEntity.status(401).body(response);
+        }
+        Employer employer = jwtUtil.getEmployer(token);
+        if (employer == null) {
+            response.put("status", "fail");
+            response.put("message", "Employer not found");
+            return ResponseEntity.status(404).body(response);
+        }
+        List<JobPost> jobPosts = jobPostRepository.findByEmployer(employer);
+        if (jobPosts.isEmpty()) {
+            response.put("status", "fail");
+            response.put("message", "No job posts found for this employer");
+            return ResponseEntity.ok(response);
+        }
+        List<Map<String,Object>> staffs = new ArrayList<>();
+        for(JobPost jobPost : jobPosts){
+            List<Application> applications = applicationRepository.findByJob(jobPost);
+            for(Application application : applications) {
+                Map<String, Object> staffData = new HashMap<>();
+                Applicant applicant = application.getApplicant();
+                staffData.put("applicantId", applicant.getId());
+                staffData.put("applicantName", applicant.getUser().getFullName());
+                staffData.put("avatar", applicant.getUser().getAvatarUrl());
+                staffData.put("position", application.getPosition());
+                staffData.put("appliedAt", application.getAppliedAt());
+                staffData.put("applicantUserID", applicant.getUser().getId());
+                List<com.example.JFS_Job_Finding_Service.models.Schedule> schedules = scheduleRepository.findByApplicant(applicant);
+                staffData.put("schedules", schedules);
+                staffs.add(staffData);
+            }
+        }
+        response.put("status", "success");
+        response.put("staffs", staffs);
+        return ResponseEntity.ok(response);
+    }
+    public ResponseEntity<?> getJobs(String token, int page, int size) {
+        Map<String, Object> response = new HashMap<>();
+        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            response.put("status", "fail");
+            response.put("message", "bạn không có quyền truy cập");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        Applicant applicant = jwtUtil.getApplicant(token);
+        if (applicant == null) {
+            response.put("status", "fail");
+            response.put("message", "Người dùng không phải là ứng viên");
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Application> applicationPage = applicationRepository.findByApplicant(applicant, pageable);
+        List<Map<String, Object>> applications = applicationPage.getContent().stream().map(application -> {
+            if(!application.getStatus().equalsIgnoreCase("Accepted")) {
+                return null;
+            }
+            JobPost jobPost = application.getJob();
+            Map<String, Object> applicationData = new HashMap<>();
+            applicationData.put("applicationId", application.getId());
+            applicationData.put("jobId", jobPost.getId());
+            applicationData.put("jobTitle", jobPost.getTitle());
+            applicationData.put("jobDescription", jobPost.getDescription());
+            applicationData.put("jobEmployerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
+            applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown");
+            applicationData.put("employerAvatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
+            applicationData.put("job",application.getPosition());
+            return applicationData;
+        }).filter(Objects::nonNull).toList();
+        response.put("status", "success");
+        response.put("jobs", applications);
+        response.put("totalPages", applicationPage.getTotalPages());
+        response.put("currentPage", applicationPage.getNumber());
+        response.put("totalApplications", applicationPage.getTotalElements());
+        response.put("totalApplicationsCount", applicationPage.getTotalElements());
+        response.put("pageSize", applicationPage.getSize());
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    public ResponseEntity<?> getSchedulesForApplicant(String token){
+        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(401).body("Unauthorized access");
+        }
+        if(!jwtUtil.checkWhetherIsApplicant(token)) {
+            return ResponseEntity.status(403).body("You do not have permission to view schedules");
+        }
+        Applicant applicant = jwtUtil.getApplicant(token);
+        if (applicant == null) {
+            return ResponseEntity.status(404).body("Applicant not found");
+        }
+        List<com.example.JFS_Job_Finding_Service.models.Schedule> schedules = scheduleRepository.findByApplicant(applicant);
+        if (schedules.isEmpty()) {
+            return ResponseEntity.ok("No schedules found for this applicant");
+        }
+        //take schedules of each day
+        Map<String, List<com.example.JFS_Job_Finding_Service.models.Schedule>> schedulesByDay = new HashMap<>();
+        for (com.example.JFS_Job_Finding_Service.models.Schedule schedule : schedules) {
+            String day = schedule.getDay();
+            if (!schedulesByDay.containsKey(day)) {
+                schedulesByDay.put(day, new ArrayList<>());
+            }
+            schedulesByDay.get(day).add(schedule);
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("schedules", schedulesByDay);
         return ResponseEntity.ok(response);
     }
 }

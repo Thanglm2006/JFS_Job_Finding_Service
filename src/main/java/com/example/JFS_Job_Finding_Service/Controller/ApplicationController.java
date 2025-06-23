@@ -53,5 +53,25 @@ public class ApplicationController {
     ) {
         return applicationService.setSchedule(headers.getFirst("token"), applicantId, jobId,schedules);
     }
-
+    @GetMapping("getStaffsForEmployer")
+    public ResponseEntity<?> getStaffsForEmployer(
+            @RequestHeader HttpHeaders headers
+    ) {
+        return applicationService.getStaffsForEmployer(headers.getFirst("token"));
+    }
+    @GetMapping("getJobs")
+    public ResponseEntity<?> getJobs(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
+    ) {
+        return applicationService.getJobs(headers.getFirst("token"), page, size);
+    }
+    @GetMapping("getSchedulesForApplicant")
+    public ResponseEntity<?> getSchedulesForApplicant(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam("jobId") String jobId
+    ) {
+        return applicationService.getSchedulesForApplicant(headers.getFirst("token"));
+    }
 }

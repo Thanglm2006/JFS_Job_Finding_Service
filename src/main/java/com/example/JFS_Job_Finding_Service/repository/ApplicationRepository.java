@@ -9,12 +9,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ApplicationRepository extends JpaRepository<Application, String> {
     Optional<Application> findByApplicant(Applicant applicant);
     Page<Application> findByApplicant(Applicant applicant, Pageable pageable);
-    Application findByJob(JobPost jobPost);
+    List<Application> findByJob(JobPost jobPost);
     Optional<Application> findByJobAndApplicant(JobPost jobPost, Applicant applicant);
 }
