@@ -9,10 +9,8 @@ import org.springframework.boot.autoconfigure.batch.BatchProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.time.Instant;
+import java.util.*;
 
 @Service
 public class ApplicationService {
@@ -48,13 +46,13 @@ public class ApplicationService {
         JobPost job= jobPostRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
         Application application = new Application(job, applicant,finalPosition);
-        application.setAppliedAt(java.time.Instant.now());
+        application.setAppliedAt(Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(job.getEmployer().getUser());
         notification.setMessage("New application received for job ID " + jobId + " from applicant " + applicant.getUser().getFullName());
         notification.setRead(false);
-        notification.setCreatedAt(java.time.Instant.now());
+        notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application submitted successfully for job ID: " + jobId);
     }
@@ -75,7 +73,7 @@ public class ApplicationService {
         notification.setUser(job.getEmployer().getUser());
         notification.setMessage("Application for job ID " + jobId + " has been withdrawn by applicant " + applicant.getUser().getFullName());
         notification.setRead(false);
-        notification.setCreatedAt(java.time.Instant.now());
+        notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application withdrawn successfully for job ID: " + jobId);
     }
@@ -105,7 +103,7 @@ public class ApplicationService {
         notification.setUser(applicant.getUser());
         notification.setMessage("Your application for job ID " + job.getId() + " has been accepted.");
         notification.setRead(false);
-        notification.setCreatedAt(java.time.Instant.now());
+        notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application accepted successfully for job ID: " + job.getId());
     }
@@ -135,7 +133,7 @@ public class ApplicationService {
         notification.setUser(applicant.getUser());
         notification.setMessage("Your application for job ID " + job.getId() + " has been rejected.");
         notification.setRead(false);
-        notification.setCreatedAt(java.time.Instant.now());
+        notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application rejected for applicant " + applicant.getUser().getFullName());
     }
@@ -151,6 +149,11 @@ public class ApplicationService {
         JobPost job = jobPostRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
         List<com.example.JFS_Job_Finding_Service.models.Schedule> existingSchedules = scheduleRepository.findByApplicant(applicant);
+        List<com.example.JFS_Job_Finding_Service.models.Schedule> schedulesForJob = scheduleRepository.findByJob(job);
+        if (schedulesForJob != null && !schedulesForJob.isEmpty()) {
+            scheduleRepository.deleteAll(existingSchedules);
+        }
+        scheduleRepository.deleteAll(existingSchedules);
         for( Schedule schedule : schedules) {
             if (schedule.getStartTime()>=(schedule.getEndTime())) {
                 return ResponseEntity.badRequest().body("Start time cannot be after end time");
@@ -206,7 +209,7 @@ public class ApplicationService {
             Applicant applicant = application.getApplicant();
                     String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
                     List<ImageFolders> folder = List.of();
-                    List<String> pics = new java.util.ArrayList<>(List.of());
+                    List<String> pics = new ArrayList<>(List.of());
                     if (jobPost.getWorkspacePicture() != null) {
                         folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
                     }
