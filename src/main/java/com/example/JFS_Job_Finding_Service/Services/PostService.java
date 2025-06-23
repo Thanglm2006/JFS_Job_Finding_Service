@@ -50,38 +50,47 @@ public class PostService {
         Page<JobPost> jobPostsPage = jobPostRepository.findAll(pageable);
 
         List<Map<String, Object>> posts = jobPostsPage.getContent().stream().map(jobPost -> {
-            String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
-            List<ImageFolders> folder = List.of();
-            List<String> pics = new java.util.ArrayList<>(List.of());
-            if (jobPost.getWorkspacePicture() != null) {
-                folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
-            }
-            for( ImageFolders imageFolder : folder){
-                if(imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())){
-                    pics.add(imageFolder.getFileName());
+            {
+                try {
+                    String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
+                    List<ImageFolders> folder = List.of();
+                    List<String> pics = new java.util.ArrayList<>(List.of());
+                    if (jobPost.getWorkspacePicture() != null) {
+                        folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
+                    }
+                    for (ImageFolders imageFolder : folder) {
+                        if (imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())) {
+                            pics.add(imageFolder.getFileName());
+                        }
+                    }
+                    boolean isSaved = false;
+                    boolean isApplied = false;
+                    if (applicant != null)
+                        isSaved = !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
+                    int totalSaved = savedJobRepository.countByJob(jobPost);
+                    if (applicant != null) isApplied = applicationRepository.findByApplicant(applicant)
+                            .stream()
+                            .anyMatch(application -> application.getJob().getId().equals(jobPost.getId()));
+                    Map<String, Object> postData = new HashMap<>();
+                    postData.put("id", jobPost.getId());
+                    postData.put("title", jobPost.getTitle());
+                    postData.put("employerName", employerName);
+                    postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
+                    postData.put("isSaved", isSaved);
+                    postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
+                    postData.put("description", jobPost.getDescription());
+                    postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
+                    postData.put("workspacePicture", pics.toArray());
+                    postData.put("createdAt", jobPost.getCreatedAt());
+                    postData.put("totalSaved", totalSaved);
+                    postData.put("isApplied", isApplied);
+                    return postData;
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error with jobPost ID: " + jobPost.getId());
+                    e.printStackTrace();
+                    throw new RuntimeException("JobPost " + jobPost.getId(), e);
                 }
             }
-            boolean isSaved=false;
-            boolean isApplied=false;
-            if(applicant!=null)isSaved= !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
-            int totalSaved = savedJobRepository.countByJob(jobPost);
-            if(applicant!=null)isApplied= applicationRepository.findByApplicant(applicant)
-                    .stream()
-                    .anyMatch(application -> application.getJob().getId().equals(jobPost.getId()));
-            Map<String, Object> postData = new HashMap<>();
-            postData.put("id", jobPost.getId());
-            postData.put("title", jobPost.getTitle());
-            postData.put("employerName", employerName);
-            postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
-            postData.put("isSaved", isSaved);
-            postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
-            postData.put("description", jobPost.getDescription());
-            postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
-            postData.put("workspacePicture", pics.toArray());
-            postData.put("createdAt", jobPost.getCreatedAt());
-            postData.put("totalSaved", totalSaved);
-            postData.put("isApplied", isApplied);
-            return postData;
         }).toList();
 
         response.put("status", "success");
