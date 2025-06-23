@@ -68,8 +68,7 @@ public class ApplicationController {
     }
     @GetMapping("getSchedulesForApplicant")
     public ResponseEntity<?> getSchedulesForApplicant(
-            @RequestHeader HttpHeaders headers,
-            @RequestParam("jobId") String jobId
+            @RequestHeader HttpHeaders headers
     ) {
         return applicationService.getSchedulesForApplicant(headers.getFirst("token"));
     }
