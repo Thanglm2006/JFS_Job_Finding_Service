@@ -14,7 +14,7 @@ import java.util.Optional;
 
 @Repository
 public interface ApplicationRepository extends JpaRepository<Application, String> {
-    Optional<Application> findByApplicant(Applicant applicant);
+    List<Application> findByApplicant(Applicant applicant);
     Page<Application> findByApplicant(Applicant applicant, Pageable pageable);
     List<Application> findByJob(JobPost jobPost);
     Optional<Application> findByJobAndApplicant(JobPost jobPost, Applicant applicant);
