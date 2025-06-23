@@ -21,7 +21,7 @@
     <description>JFS_Job_Finding_Service</description>
 
     <properties>
-        <java.version>23.0.1</java.version>
+        <java.version>22</java.version>
         <!-- Keep your other property versions as appropriate -->
     </properties>
 
