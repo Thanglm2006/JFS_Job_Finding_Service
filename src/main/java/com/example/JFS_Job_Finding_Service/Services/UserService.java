@@ -7,20 +7,18 @@ import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
 import com.example.JFS_Job_Finding_Service.repository.EmployerRepository;
 import com.example.JFS_Job_Finding_Service.security.PasswordConfig;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
-import com.example.JFS_Job_Finding_Service.ultils.JwtUtil.*;
 import com.example.JFS_Job_Finding_Service.models.User;
 import com.example.JFS_Job_Finding_Service.repository.UserRepository;
 
-import org.jooq.exception.IntegrityConstraintViolationException;
+import jakarta.mail.MessagingException;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
@@ -38,7 +36,17 @@ public class UserService {
     private CloudinaryService cloudinaryService;
     @Autowired
     private MailService mailService;
+    private final Map<String, VerificationInfo> passwordResetMap = new HashMap<>();
 
+    private String generateVerificationCode() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder code = new StringBuilder();
+        Random rnd = new Random();
+        for (int i = 0; i < 6; i++) {
+            code.append(chars.charAt(rnd.nextInt(chars.length())));
+        }
+        return code.toString();
+    }
     public User getUserById(long id){
         return userRepository.findById(id).orElse(null);
     }
@@ -109,8 +117,11 @@ public class UserService {
         response.put("token", token);
         response.put("user", user.get());
         u.ifPresent(employer -> response.put("employer", employer));
-        mailService.sendSimpleEmail(email, "Login Notification",
-                "You have successfully logged in to your account on JFS Job Finding Service. If this was not you, please contact support immediately.");
+        try {
+            mailService.sendVerificationHtmlEmail(email,generateVerificationCode());
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Date dateOfBirth, String gender) {
@@ -430,5 +441,88 @@ public class UserService {
         }
         response.put("result", "invalid");
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+    public ResponseEntity<?> resetPassword(String email, String code, String newPassword, String confirmPassword) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (!newPassword.equals(confirmPassword)) {
+            response.put("error", "no matching password");
+            response.put("message", "Mật khẩu không khớp!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        VerificationInfo info = passwordResetMap.get(email);
+        if (info == null) {
+            response.put("error", "Invalid");
+            response.put("message", "Mã xác nhận không hợp lệ!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        if(info.isExpired()){
+            response.put("error", "Expired");
+            response.put("message","Mã hết hạn!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!info.getCode().equalsIgnoreCase(code)) {
+            response.put("error", "Wrong code");
+            response.put("message", "Mã xác nhận không đúng.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            response.put("error", "User not found");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        User user = userOpt.get();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        passwordResetMap.remove(email); // Clean up after success
+
+        response.put("status", "success");
+        response.put("message", "Đặt lại mật khẩu thành công!");
+        return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<?> sendResetCode(String email) {
+        Map<String, Object> response = new HashMap<>();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            response.put("error", "Not found");
+            response.put("message", "Email không tồn tại!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        String code = generateVerificationCode();
+        long expiryTime = System.currentTimeMillis() + 5 * 60 * 1000; // 5 minutes
+        passwordResetMap.put(email, new VerificationInfo(code, expiryTime));
+
+        try {
+            mailService.sendVerificationHtmlEmail(email, code);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send email", e);
+        }
+
+        response.put("status", "success");
+        response.put("message", "Mã xác nhận đã được gửi đến email.");
+        return ResponseEntity.ok(response);
+    }
+
+    private static class VerificationInfo {
+        @Getter
+        private final String code;
+        private final long expiryTimeMillis;
+
+        public VerificationInfo(String code, long expiryTimeMillis) {
+            this.code = code;
+            this.expiryTimeMillis = expiryTimeMillis;
+        }
+
+        public boolean isExpired() {
+            return System.currentTimeMillis() > expiryTimeMillis;
+        }
+
     }
 }
