@@ -296,6 +296,7 @@ public class ApplicationService {
                 staffData.put("applicantId", applicant.getId());
                 staffData.put("applicantName", applicant.getUser().getFullName());
                 staffData.put("avatar", applicant.getUser().getAvatarUrl());
+                staffData.put("jobId", jobPost.getId());
                 staffData.put("position", application.getPosition());
                 staffData.put("appliedAt", application.getAppliedAt());
                 staffData.put("applicantUserID", applicant.getUser().getId());
