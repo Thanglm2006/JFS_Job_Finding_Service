@@ -192,6 +192,7 @@ public class ApplicationService {
             applicationData.put("position", application.getPosition());
             applicationData.put("appliedAt", application.getAppliedAt());
             applicationData.put("applicantId", application.getApplicant().getId());
+            applicationData.put("userId", application.getApplicant().getUser().getId());
             applicationData.put("jobPost",postData);
             applicationData.put("avatar", application.getApplicant().getUser().getAvatarUrl());
 
