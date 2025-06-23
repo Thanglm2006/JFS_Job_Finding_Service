@@ -5,6 +5,7 @@ import com.example.JFS_Job_Finding_Service.DTO.Schedule;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.batch.BatchProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -78,7 +79,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application withdrawn successfully for job ID: " + jobId);
     }
-    public ResponseEntity<?> accept(String token, Long applicationId, Long applicantId) {
+    public ResponseEntity<?> accept(String token, String jobId, Long applicantId) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
@@ -88,9 +89,10 @@ public class ApplicationService {
 
         Applicant applicant = applicantRepository.findById(applicantId)
                 .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
-        Application application = applicationRepository.findByApplicant(applicant)
-                .orElseThrow(() -> new RuntimeException("Application not found with ID: " + applicationId));
-        JobPost job = application.getJob();
+        JobPost job= jobPostRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+        Application application = applicationRepository.findByJobAndApplicant(job, applicant)
+                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
         if (!job.getEmployer().getUser().getEmail().equals(jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(403).body("You do not own this job post");
         }
@@ -107,7 +109,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application accepted successfully for job ID: " + job.getId());
     }
-    public ResponseEntity<?> reject(String token, Long applicationId, Long applicantId) {
+    public ResponseEntity<?> reject(String token, String jobId, Long applicantId) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
@@ -117,9 +119,10 @@ public class ApplicationService {
 
         Applicant applicant = applicantRepository.findById(applicantId)
                 .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
-        Application application = applicationRepository.findByApplicant(applicant)
-                .orElseThrow(() -> new RuntimeException("Application not found with ID: " + applicationId));
-        JobPost job = application.getJob();
+        JobPost job= jobPostRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+        Application application = applicationRepository.findByJobAndApplicant(job, applicant)
+                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
         if (!job.getEmployer().getUser().getEmail().equals(jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(403).body("You do not own this job post");
         }

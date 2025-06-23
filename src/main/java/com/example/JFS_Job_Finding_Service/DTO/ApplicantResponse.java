@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter @Setter
 public class ApplicantResponse {
-    private Long applicationId;
+    private String jobId;
     private Long applicantId;
 
 }

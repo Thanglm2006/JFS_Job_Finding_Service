@@ -29,14 +29,14 @@ public class ApplicationController {
             @RequestHeader HttpHeaders headers,
             @RequestBody ApplicantResponse applicantResponse
     ) {
-        return applicationService.accept(headers.getFirst("token"), applicantResponse.getApplicationId(), applicantResponse.getApplicantId());
+        return applicationService.accept(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId());
     }
     @PostMapping("/reject")
     public ResponseEntity<?> rejectApplication(
             @RequestHeader HttpHeaders headers,
             @RequestBody ApplicantResponse applicantResponse
     ) {
-        return applicationService.reject(headers.getFirst("token"), applicantResponse.getApplicationId(), applicantResponse.getApplicantId());
+        return applicationService.reject(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId());
     }
     @PostMapping("/getAllApplicationsForEmployer")
     public ResponseEntity<?> getAllApplicationsForEmployer(
