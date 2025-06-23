@@ -6,6 +6,6 @@ import lombok.Setter;
 @Getter @Setter
 public class ApplicantResponse {
     private String jobId;
-    private Long applicantId;
+    private String applicantId;
 
 }

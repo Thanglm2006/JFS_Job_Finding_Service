@@ -83,7 +83,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application withdrawn successfully for job ID: " + jobId);
     }
-    public ResponseEntity<?> accept(String token, String jobId, Long applicantId) {
+    public ResponseEntity<?> accept(String token, String jobId, String applicantId) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
@@ -113,7 +113,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application accepted successfully for job ID: " + job.getId());
     }
-    public ResponseEntity<?> reject(String token, String jobId, Long applicantId) {
+    public ResponseEntity<?> reject(String token, String jobId, String applicantId) {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
