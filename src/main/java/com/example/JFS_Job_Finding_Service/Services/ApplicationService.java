@@ -211,7 +211,7 @@ public class ApplicationService {
             List<Application> applicationsL = applicationRepository.findByJob(jobPost);
             List<Map<String, Object>> applicationDataList = new ArrayList<>();
             for(Application application : applicationsL) {
-                if (application == null) {
+                if (application == null||application.getStatus().equalsIgnoreCase("Rejected")|| application.getStatus().equalsIgnoreCase("Accepted")) {
                     continue;
                 }
                 Applicant applicant = application.getApplicant();
