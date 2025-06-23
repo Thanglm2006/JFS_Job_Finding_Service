@@ -340,6 +340,8 @@ public class ApplicationService {
             applicationData.put("employerAvatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
             applicationData.put("job",application.getPosition());
             applicationData.put("acceptedAt", application.getAppliedAt());
+            applicationData.put("applicantUserId", application.getApplicant().getUser().getId());
+            applicationData.put("employerUserId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
             return applicationData;
         }).filter(Objects::nonNull).toList();
         response.put("status", "success");
