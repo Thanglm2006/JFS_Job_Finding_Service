@@ -56,7 +56,7 @@ public class ApplicationService {
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(job.getEmployer().getUser());
-        notification.setMessage("New application received for job ID " + jobId + " from applicant " + applicant.getUser().getFullName());
+        notification.setMessage(applicant.getUser().getFullName()+"đã gửi đơn xin việc cho " + job.getTitle());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
@@ -108,7 +108,7 @@ public class ApplicationService {
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
-        notification.setMessage("Your application for job ID " + job.getId() + " has been accepted.");
+        notification.setMessage("Bạn đã được nhận vào làm việc cho vị trí " + application.getPosition() + " cho " + job.getEmployer().getUser().getFullName());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
@@ -138,7 +138,7 @@ public class ApplicationService {
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
-        notification.setMessage("Your application for job ID " + job.getId() + " has been rejected.");
+        notification.setMessage("Đơn xin việc bị từ chối bởi" + job.getEmployer().getUser().getFullName() + " cho vị trí " + application.getPosition());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
@@ -211,7 +211,13 @@ public class ApplicationService {
                 scheduleModel.setEndTime(schedule.getEndTime());
                 scheduleModel.setDay(schedule.getDay());
                 scheduleModel.setDescription(schedule.getDescription());
+                Notification notification = new Notification();
+                notification.setUser(applicant.getUser());
+                notification.setMessage("Lịch làm việc đã được chỉnh sửa" + job.getTitle() + " bởi " + job.getEmployer().getUser().getFullName());
+                notification.setRead(false);
+                notification.setCreatedAt(Instant.now());
                 scheduleRepository.save(scheduleModel);
+                notificationRepository.save(notification);
             } catch (Exception e) {
                 return ResponseEntity.badRequest().body("Schedule could not be saved, invalid schedule data");
             }

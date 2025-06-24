@@ -37,16 +37,15 @@ public class NotificationService {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         boolean checkAdmin = jwtUtil.checkPermission(token,"Admin");
-        boolean checkApplicant = jwtUtil.checkWhetherIsApplicant(token);
+        String email = jwtUtil.extractEmail(token);
         if(checkAdmin){
-            String email = jwtUtil.extractEmail(token);
+
             Admin admin = adminRepository.findByEmail(email);
             if (admin == null) {
                 return ResponseEntity.status(403).body("You do not have permission to access notifications");
             }
             return new ResponseEntity<>(notificationRepository.findAll(), HttpStatus.OK);
         }
-        String email = jwtUtil.extractEmail(token);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
         return new ResponseEntity<>(notificationRepository.findByUser(user), HttpStatus.OK);
