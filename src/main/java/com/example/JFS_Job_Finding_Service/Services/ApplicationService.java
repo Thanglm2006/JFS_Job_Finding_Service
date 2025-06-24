@@ -160,7 +160,6 @@ public class ApplicationService {
         if (schedulesForJob != null && !schedulesForJob.isEmpty()) {
             scheduleRepository.deleteAll(schedulesForJob);
         }
-        scheduleRepository.deleteAll(existingSchedules);
         for( Schedule schedule : schedules) {
             if (schedule.getStartTime()>=(schedule.getEndTime())) {
                 return ResponseEntity.badRequest().body("Start time cannot be after end time");
