@@ -101,6 +101,23 @@ public class PostService {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    public ResponseEntity<?> fullTextSearchPosts(String token, String pattern) {
+        if (!jwtUtil.validateToken(token)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "fail");
+            response.put("message", "bạn không có quyền truy cập");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<JobPost> results = jobPostRepository.searchWithPGroonga(pattern);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("results", results);
+        return ResponseEntity.ok(response);
+    }
+
     public ResponseEntity<?> getSomePostOfEmployer(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
         if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {

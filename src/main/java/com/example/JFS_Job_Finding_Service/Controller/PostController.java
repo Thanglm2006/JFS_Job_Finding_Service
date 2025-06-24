@@ -195,6 +195,18 @@ public class PostController {
             return ResponseEntity.status(500).body("Error fetching saved posts: " + e.getMessage());
         }
     }
+    @GetMapping("/findPost")
+    @Operation(summary = "find a post by pattern")
+    public ResponseEntity<?> findPost(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam("pattern") String pattern
+    ) {
+        try {
+            return postService.fullTextSearchPosts(headers.getFirst("token"), pattern);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error finding post: " + e.getMessage());
+        }
+    }
     @GetMapping("/getAppliedPosts")
     @Operation(summary = "get applied posts, only applicant can do this")
     public ResponseEntity<?> getAppliedPosts(
