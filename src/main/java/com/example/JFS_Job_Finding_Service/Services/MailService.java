@@ -76,7 +76,7 @@ public class MailService {
                 <!-- Footer -->
                 <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 20px 20px;">
                     <p style="color: #888; font-size: 12px; margin: 0; line-height: 1.5;">
-                        © 2024 JFS Job Finding Service. Cảm ơn bạn đã tin tưởng chúng tôi! 💝
+                        © 2025 JFS Job Finding Service. Cảm ơn bạn đã tin tưởng chúng tôi! 💝
                     </p>
                     <div style="margin-top: 15px;">
                         <span style="color: #ddd; margin: 0 10px;">•</span>
@@ -155,7 +155,7 @@ public class MailService {
                             <!-- Footer -->
                             <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 20px 20px;">
                               <p style="color: #888; font-size: 12px; margin: 0; line-height: 1.5;">
-                                © 2024 JFS Job Finding Service. Cảm ơn bạn đã tin tương chúng tôi! 💝
+                                © 2025 JFS Job Finding Service. Cảm ơn bạn đã tin tương chúng tôi! 💝
                               </p>
                               <div style="margin-top: 15px;">
                                 <span style="color: #ddd; margin: 0 10px;">•</span>
