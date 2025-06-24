@@ -15,8 +15,10 @@ public class MailService {
 
     @Autowired
     private JavaMailSender mailSender;
+
     @Value("${spring.mail.username}")
     private String fromEmail;
+
     @Async
     public void sendSimpleEmail(String to, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
@@ -27,10 +29,8 @@ public class MailService {
         mailSender.send(message);
     }
 
-    private final MimeMessage message = mailSender.createMimeMessage();
     @Async
     public void sendResetPasswordCode(String to, String code) throws MessagingException {
-
         String subject = "🔐 JFS: Mã xác nhận để đặt lại mật khẩu";
 
         String htmlContent = """
@@ -46,19 +46,21 @@ public class MailService {
                 <p style="color: #888; font-size: 12px; margin-top: 30px;">Cảm ơn bạn!</p>
             </div>
             """.formatted(code);
+
+        MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
         helper.setFrom(fromEmail);
         helper.setTo(to);
         helper.setSubject(subject);
-        helper.setText(htmlContent, true); // true = is HTML
+        helper.setText(htmlContent, true);
 
         mailSender.send(message);
     }
 
     @Async
-    public void sendVerificationEmailHTML(String to, String code){
-        try{
+    public void sendVerificationEmailHTML(String to, String code) {
+        try {
             String subject = "🔐 JFS: Mã xác nhận để xác minh email";
 
             String htmlContent = """
@@ -75,17 +77,17 @@ public class MailService {
                 </div>
                 """.formatted(code);
 
+            MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setFrom(fromEmail);
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setText(htmlContent, true); // true = is HTML
+            helper.setText(htmlContent, true);
 
             mailSender.send(message);
         } catch (MessagingException e) {
             e.printStackTrace();
         }
     }
-
 }
