@@ -86,7 +86,7 @@ public class MailService {
                     </div>
                 </div>
             </div>
-            """.replace("{Code}", code);
+            """.replace("{{Code}}", code);
 
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -165,7 +165,7 @@ public class MailService {
                               </div>
                             </div>
                           </div>
-                """.replace("{Code}",code);
+                """.replace("{{Code}}",code);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
