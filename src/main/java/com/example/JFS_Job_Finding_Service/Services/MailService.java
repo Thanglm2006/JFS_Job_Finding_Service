@@ -10,8 +10,6 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.Random;
-
 @Service
 public class MailService {
 
@@ -29,26 +27,25 @@ public class MailService {
         mailSender.send(message);
     }
 
-
+    private final MimeMessage message = mailSender.createMimeMessage();
     @Async
-    public void sendVerificationHtmlEmail(String to, String code) throws MessagingException {
+    public void sendResetPasswordCode(String to, String code) throws MessagingException {
 
-        String subject = "🔐 Verify your email address";
+        String subject = "🔐 JFS: Mã xác nhận để đặt lại mật khẩu";
 
         String htmlContent = """
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; border-radius: 10px;">
-                    <h2 style="color: #333;">Email Verification</h2>
-                    <p>Dear user,</p>
-                    <p>Use the following verification code to complete your sign-up process:</p>
-                    <div style="font-size: 24px; font-weight: bold; color: #fff; background-color: #4CAF50; padding: 10px 20px; border-radius: 8px; display: inline-block;">
-                        %s
-                    </div>
-                    <p style="margin-top: 20px;">This code will expire in 5 minutes. If you didn't request this, please ignore this email.</p>
-                    <p style="color: #888; font-size: 12px; margin-top: 30px;">Thank you,<br>Your Company Team</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+                <h1 style="text-align: center; color: #4C51BF;">JFS Job Finding Service</h1>
+                <h2 style="color: #333;">Đặt lại mật khẩu</h2>
+                <p>Người dùng thân mến,</p>
+                <p>Vui lòng sử dụng mã xác nhận sau để hoàn tất việc đặt lại mật khẩu:</p>
+                <div style="font-size: 24px; font-weight: bold; color: #fff; background-color: #4CAF50; padding: 10px 20px; border-radius: 8px; display: inline-block;">
+                    %s
                 </div>
-                """.formatted(code);
-
-        MimeMessage message = mailSender.createMimeMessage();
+                <p style="margin-top: 20px;">Mã này sẽ hết hạn sau 5 phút. Nếu bạn không gửi yêu cầu, vui lòng bỏ qua email này.</p>
+                <p style="color: #888; font-size: 12px; margin-top: 30px;">Cảm ơn bạn!</p>
+            </div>
+            """.formatted(code);
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
         helper.setFrom(fromEmail);
@@ -57,6 +54,38 @@ public class MailService {
         helper.setText(htmlContent, true); // true = is HTML
 
         mailSender.send(message);
+    }
+
+    @Async
+    public void sendVerificationEmailHTML(String to, String code){
+        try{
+            String subject = "🔐 JFS: Mã xác nhận để xác minh email";
+
+            String htmlContent = """
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+                    <h1 style="text-align: center; color: #4C51BF;">JFS Job Finding Service</h1>
+                    <h2 style="color: #333;">Xác minh email</h2>
+                    <p>Người dùng thân mến,</p>
+                    <p>Vui lòng sử dụng mã xác nhận sau để hoàn tất việc xác minh email:</p>
+                    <div style="font-size: 24px; font-weight: bold; color: #fff; background-color: #4CAF50; padding: 10px 20px; border-radius: 8px; display: inline-block;">
+                        %s
+                    </div>
+                    <p style="margin-top: 20px;">Mã này sẽ hết hạn sau 5 phút. Nếu bạn không gửi yêu cầu, vui lòng bỏ qua email này.</p>
+                    <p style="color: #888; font-size: 12px; margin-top: 30px;">Cảm ơn bạn!</p>
+                </div>
+                """.formatted(code);
+
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true); // true = is HTML
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
     }
 
 }

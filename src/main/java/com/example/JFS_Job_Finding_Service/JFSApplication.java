@@ -9,11 +9,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.sql.DataSource;
-
+@EnableAsync
 @SpringBootApplication(scanBasePackages = "com.example.JFS_Job_Finding_Service")
 @EnableJpaRepositories(basePackages = "com.example.JFS_Job_Finding_Service.repository")
 @EntityScan(basePackages = "com.example.JFS_Job_Finding_Service.models")

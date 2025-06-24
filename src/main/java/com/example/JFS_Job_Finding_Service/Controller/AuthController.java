@@ -84,6 +84,13 @@ public class AuthController {
         String password = body.get("password");
         return adminService.addAdmin(secretPass, fullName, email, password);
     }
+    @PostMapping("/verifyEmail")
+    @Operation(summary = "verify email", description = "send a verification code to the email")
+    public ResponseEntity<?> verifyEmail(@RequestBody Map<String, Object> body) {
+        String email = body.get("email").toString();
+        String code = body.get("code").toString();
+        return userService.verifyEmail(email, code);
+    }
     @PostMapping("/checkEmail")
     @Operation(summary = "check whether the email is already used")
     public ResponseEntity<?> checkEmail(@RequestBody Map<String, Object> body ) {
