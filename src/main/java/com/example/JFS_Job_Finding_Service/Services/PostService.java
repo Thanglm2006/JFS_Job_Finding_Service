@@ -14,10 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class PostService {
@@ -103,20 +100,79 @@ public class PostService {
     }
 
     public ResponseEntity<?> fullTextSearchPosts(String token, String pattern) {
+        Map<String, Object> response = new HashMap<>();
+
         if (!jwtUtil.validateToken(token)) {
-            Map<String, Object> response = new HashMap<>();
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
 
-        List<JobPost> results = jobPostRepository.searchWithPGroonga(pattern);
+        Applicant applicant = jwtUtil.getApplicant(token);
+        if (applicant == null) {
+            response.put("status", "fail");
+            response.put("message", "Người dùng không phải là ứng viên");
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+        }
+        List<JobPost> jobPosts = jobPostRepository.searchWithPGroonga(pattern); // returns max 10
 
-        Map<String, Object> response = new HashMap<>();
+        List<Map<String, Object>> posts = jobPosts.stream().map(jobPost -> {
+            try {
+                String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
+                List<ImageFolders> folder = List.of();
+                List<String> pics = new ArrayList<>();
+
+                if (jobPost.getWorkspacePicture() != null) {
+                    folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
+                }
+
+                for (ImageFolders imageFolder : folder) {
+                    if (imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())) {
+                        pics.add(imageFolder.getFileName());
+                    }
+                }
+
+                boolean isSaved = false;
+                boolean isApplied = false;
+
+                if (applicant != null)
+                    isSaved = !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
+
+                int totalSaved = savedJobRepository.countByJob(jobPost);
+
+                if (applicant != null)
+                    isApplied = applicationRepository.findByApplicant(applicant).stream()
+                            .anyMatch(application -> application.getJob().getId().equals(jobPost.getId()));
+
+                Map<String, Object> postData = new HashMap<>();
+                postData.put("id", jobPost.getId());
+                postData.put("title", jobPost.getTitle());
+                postData.put("employerName", employerName);
+                postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
+                postData.put("isSaved", isSaved);
+                postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
+                postData.put("description", jobPost.getDescription());
+                postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
+                postData.put("workspacePicture", pics.toArray());
+                postData.put("createdAt", jobPost.getCreatedAt());
+                postData.put("totalSaved", totalSaved);
+                postData.put("isApplied", isApplied);
+
+                return postData;
+            } catch (Exception e) {
+                System.err.println("⚠️ Error with jobPost ID: " + jobPost.getId());
+                e.printStackTrace();
+                throw new RuntimeException("JobPost " + jobPost.getId(), e);
+            }
+        }).toList();
+
         response.put("status", "success");
-        response.put("results", results);
-        return ResponseEntity.ok(response);
+        response.put("message", "Kết quả tìm kiếm");
+        response.put("posts", posts);
+        response.put("totalResults", posts.size());
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
 
     public ResponseEntity<?> getSomePostOfEmployer(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
