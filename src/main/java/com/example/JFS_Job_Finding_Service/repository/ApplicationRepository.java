@@ -17,5 +17,6 @@ public interface ApplicationRepository extends JpaRepository<Application, String
     List<Application> findByApplicant(Applicant applicant);
     Page<Application> findByApplicant(Applicant applicant, Pageable pageable);
     List<Application> findByJob(JobPost jobPost);
+    List<Application> findByJobAndStatus(JobPost jobPost, String status);
     Optional<Application> findByJobAndApplicant(JobPost jobPost, Applicant applicant);
 }

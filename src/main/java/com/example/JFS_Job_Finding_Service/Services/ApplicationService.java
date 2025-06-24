@@ -151,15 +151,43 @@ public class ApplicationService {
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
             return ResponseEntity.status(403).body("You do not have permission to set schedules");
         }
+        //check if intersection in schedules
+        if (schedules == null || schedules.isEmpty()) {
+            return ResponseEntity.badRequest().body("Schedules cannot be empty");
+        }
+        if (schedules.stream().anyMatch(schedule -> schedule.getStartTime() >= schedule.getEndTime())) {
+            return ResponseEntity.badRequest().body("Start time cannot be after end time");
+        }
+        if (schedules.stream().anyMatch(schedule -> schedule.getDay() == null || !schedule.getDay().matches("^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$"))) {
+            return ResponseEntity.badRequest().body("Invalid day of the week in schedules");
+        }
+        if (schedules.stream().anyMatch(schedule -> schedule.getDescription() == null || schedule.getDescription().isEmpty())) {
+            return ResponseEntity.badRequest().body("Schedule description cannot be empty");
+        }
+        if (schedules.stream().anyMatch(schedule -> schedule.getStartTime() < 0 || schedule.getEndTime() < 0)) {
+            return ResponseEntity.badRequest().body("Start time and end time must be non-negative");
+        }
+        for (int i = 0; i < schedules.size(); i++) {
+            Schedule s1 = schedules.get(i);
+            for (int j = i + 1; j < schedules.size(); j++) {
+                Schedule s2 = schedules.get(j);
+                if (s1.getDay().equals(s2.getDay()) &&
+                        s1.getStartTime() <= s2.getEndTime() &&
+                        s2.getStartTime() < s1.getEndTime()) {
+                    return ResponseEntity.badRequest().body("Schedules conflict on " + s1.getDay() + " between " + s1.getStartTime() + " and " + s1.getEndTime());
+                }
+            }
+        }
         Applicant applicant = applicantRepository.findById(applicantId)
                 .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
         JobPost job = jobPostRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
-        List<com.example.JFS_Job_Finding_Service.models.Schedule> existingSchedules = scheduleRepository.findByApplicant(applicant);
         List<com.example.JFS_Job_Finding_Service.models.Schedule> schedulesForJob = scheduleRepository.findByJob(job);
         if (schedulesForJob != null && !schedulesForJob.isEmpty()) {
             scheduleRepository.deleteAll(schedulesForJob);
         }
+        List<com.example.JFS_Job_Finding_Service.models.Schedule> existingSchedules = scheduleRepository.findByApplicant(applicant);
+
         for( Schedule schedule : schedules) {
             if (schedule.getStartTime()>=(schedule.getEndTime())) {
                 return ResponseEntity.badRequest().body("Start time cannot be after end time");
@@ -171,6 +199,7 @@ public class ApplicationService {
                 if (existingSchedule.getDay().equals(schedule.getDay()) &&
                         ((schedule.getStartTime() >= existingSchedule.getStartTime() && schedule.getStartTime() <= existingSchedule.getEndTime()) ||
                                 (schedule.getEndTime() >= existingSchedule.getStartTime() && schedule.getEndTime() <= existingSchedule.getEndTime()))) {
+                    System.out.println("Schedule conflicts with existing schedule on " + existingSchedule.getDay() + " from " + existingSchedule.getStartTime() + " to " + existingSchedule.getEndTime() + "and another shift" + schedule.getStartTime() + " to " + schedule.getEndTime());
                     return ResponseEntity.badRequest().body("Schedule conflicts with existing schedule on " + schedule.getDay());
                 }
             }
@@ -289,7 +318,7 @@ public class ApplicationService {
         }
         List<Map<String,Object>> staffs = new ArrayList<>();
         for(JobPost jobPost : jobPosts){
-            List<Application> applications = applicationRepository.findByJob(jobPost);
+            List<Application> applications = applicationRepository.findByJobAndStatus(jobPost, "Accepted");
             for(Application application : applications) {
                 Map<String, Object> staffData = new HashMap<>();
                 Applicant applicant = application.getApplicant();
@@ -300,7 +329,7 @@ public class ApplicationService {
                 staffData.put("position", application.getPosition());
                 staffData.put("appliedAt", application.getAppliedAt());
                 staffData.put("applicantUserID", applicant.getUser().getId());
-                List<com.example.JFS_Job_Finding_Service.models.Schedule> schedules = scheduleRepository.findByApplicant(applicant);
+                List<com.example.JFS_Job_Finding_Service.models.Schedule> schedules = scheduleRepository.findByApplicantAndJob(applicant, jobPost);
                 staffData.put("schedules", schedules);
                 staffs.add(staffData);
             }
@@ -364,6 +393,7 @@ public class ApplicationService {
             return ResponseEntity.status(404).body("Applicant not found");
         }
         List<com.example.JFS_Job_Finding_Service.models.Schedule> schedules = scheduleRepository.findByApplicant(applicant);
+        schedules.sort(Comparator.comparingInt(com.example.JFS_Job_Finding_Service.models.Schedule::getStartTime));
         if (schedules.isEmpty()) {
             return ResponseEntity.ok("No schedules found for this applicant");
         }
