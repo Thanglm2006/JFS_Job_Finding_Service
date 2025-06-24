@@ -91,6 +91,21 @@ public class AuthController {
         String code = body.get("code").toString();
         return userService.verifyEmail(email, code);
     }
+    @PostMapping("/forgetPassword")
+    @Operation(summary = "forget password", description = "send a verification code to the email for resetting password")
+    public ResponseEntity<?> forgetPassword(@RequestBody Map<String, Object> body) {
+        String email = body.get("email").toString();
+        return userService.sendResetCode(email);
+    }
+    @PostMapping("/changePassword")
+    @Operation(summary = "change password", description = "change the password using the verification code")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String code = body.get("code");
+        String newPassword = body.get("newPassword");
+        String confirmPassword = body.get("confirmPassword");
+        return userService.resetPassword(email, code, newPassword, confirmPassword);
+    }
     @PostMapping("/checkEmail")
     @Operation(summary = "check whether the email is already used")
     public ResponseEntity<?> checkEmail(@RequestBody Map<String, Object> body ) {
