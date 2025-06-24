@@ -72,6 +72,7 @@ public class UserService {
         user.setDateOfBirth(dateOfBirth);
         user.setGender(gender);
         user.setRole("Employer");
+        pendingRegisterMap.remove(email);
         PendingRegister pendingRegister=new PendingRegister();
         try{
             pendingRegister.setUser(user);
@@ -148,6 +149,7 @@ public class UserService {
         user.setDateOfBirth(dateOfBirth);
         user.setGender(gender);
         user.setRole("Applicant");
+        pendingRegisterMap.remove(email);
         PendingRegister pendingRegister=new PendingRegister();
         try{
             pendingRegister.setUser(user);
