@@ -387,6 +387,43 @@ public class ApplicationService {
         response.put("pageSize", applicationPage.getSize());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+    public ResponseEntity<?> deletestaff(String token, String applicantId, String jobId){
+        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(401).body("Unauthorized access");
+        }
+        Applicant aplicant = jwtUtil.getApplicant(token);
+        if(aplicant == null) {
+            return ResponseEntity.status(404).body("Applicant not found");
+        }
+        if(!jwtUtil.checkWhetherIsEmployer(token)) {
+            return ResponseEntity.status(403).body("You do not have permission to delete staff");
+        }
+        Employer employer = jwtUtil.getEmployer(token);
+        Applicant applicant = applicantRepository.findById(applicantId)
+                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
+        List<JobPost> jobPosts = jobPostRepository.findByEmployer(employer);
+        if (jobPosts.isEmpty()) {
+            return ResponseEntity.status(404).body("No job posts found for this employer");
+        }
+        JobPost jobPost= jobPostRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+        if (!jobPosts.contains(jobPost)) {
+            return ResponseEntity.status(403).body("You do not own this job post");
+        }
+        Application application= applicationRepository.findByJobAndApplicant(jobPost, applicant)
+                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
+        if (application == null || !application.getStatus().equalsIgnoreCase("Accepted")) {
+            return ResponseEntity.status(404).body("Application not found or not accepted for this job post");
+
+        }
+        applicationRepository.delete(application);
+        Notification notification = new Notification();
+        notification.setUser(applicant.getUser());
+        notification.setMessage("Bạn đã bị đuổi việc " + application.getPosition() + " bởi " + employer.getUser().getFullName());
+        notification.setRead(false);
+        notificationRepository.save(notification);
+        return ResponseEntity.ok("Staff deleted successfully");
+    }
     public ResponseEntity<?> getSchedulesForApplicant(String token){
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");

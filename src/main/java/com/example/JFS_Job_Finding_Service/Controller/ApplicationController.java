@@ -72,4 +72,11 @@ public class ApplicationController {
     ) {
         return applicationService.getSchedulesForApplicant(headers.getFirst("token"));
     }
+    @PostMapping("deleteStaff")
+    public ResponseEntity<?> deleteStaff(
+            @RequestHeader HttpHeaders headers,
+            @RequestBody ApplicantResponse applicantResponse
+    ) {
+        return applicationService.deletestaff(headers.getFirst("token"),  applicantResponse.getApplicantId(),applicantResponse.getJobId());
+    }
 }
