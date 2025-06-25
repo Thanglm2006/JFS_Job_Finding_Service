@@ -22,7 +22,8 @@ public class Employer {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private employer_type type;
-
+    @Column
+    private String customType;
     public Employer(User user, employer_type type) {
         this.user = user;
         this.type = type;

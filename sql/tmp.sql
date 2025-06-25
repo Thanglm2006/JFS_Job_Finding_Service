@@ -27,7 +27,8 @@ CREATE TABLE users(
 create table employer(
     id text primary key,
     user_id int references users(id) on delete cascade,
-    type employer_type not null
+    type employer_type not null,
+    custom_type text
 );
 create table admin(
     id serial primary key,
