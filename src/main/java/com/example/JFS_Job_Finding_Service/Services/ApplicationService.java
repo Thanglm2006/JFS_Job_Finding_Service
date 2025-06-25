@@ -391,10 +391,6 @@ public class ApplicationService {
         if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
-        Applicant aplicant = jwtUtil.getApplicant(token);
-        if(aplicant == null) {
-            return ResponseEntity.status(404).body("Applicant not found");
-        }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
             return ResponseEntity.status(403).body("You do not have permission to delete staff");
         }
