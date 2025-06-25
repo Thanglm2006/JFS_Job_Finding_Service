@@ -33,7 +33,8 @@ public class PostService {
     private ApplicationRepository applicationRepository;
     @Autowired
     private EmployerRepository employerRepository;
-
+    @Autowired
+    private NotificationRepository notificationRepository;
     public ResponseEntity<?> getSomePosts(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
 
@@ -240,6 +241,11 @@ public class PostService {
         }
         jobPostRepository.delete(jobPost);
         savedJobRepository.deleteAll(savedJobRepository.findByJob(jobPost));
+        Notification notification=new Notification();
+        notification.setUser(jobPost.getEmployer().getUser());
+        notification.setMessage("Bài đăng với tiêu đề \"" + jobPost.getTitle() + "\" đã bị xóa.");
+        notification.setRead(false);
+        notificationRepository.save(notification);
         response.put("status", "success");
         response.put("message", "Xóa bài đăng thành công");
         return new ResponseEntity<>(response, HttpStatus.OK);
