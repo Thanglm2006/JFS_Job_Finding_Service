@@ -113,6 +113,29 @@ public class UserService {
         response.put("message", "Một mã xác nhận đã được gửi đến email của bạn. Vui lòng kiểm tra email để hoàn tất đăng ký!");
         return ResponseEntity.ok(response);
     }
+    public ResponseEntity<?> sendVerificationEmailHTML(String email) {
+        Map<String, Object> response = new HashMap<>();
+        PendingRegister pendingRegister = pendingRegisterMap.get(email);
+        pendingRegisterMap.remove(email);
+        if (pendingRegister == null) {
+            response.put("error", "Invalid");
+            response.put("message", "Mã xác nhận không hợp lệ!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        if(pendingRegister.getExpireTime()<System.currentTimeMillis()){
+            response.put("error", "Expired");
+            response.put("message","Mã hết hạn!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        String code = generateVerificationCode();
+        pendingRegister.setCode(code);
+        pendingRegister.setExpireTime(System.currentTimeMillis() + 5 * 60 * 1000);
+        pendingRegisterMap.put(email, pendingRegister);
+        mailService.sendVerificationEmailHTML(email, code);
+        response.put("status", "success");
+        response.put("message", "Mã xác nhận đã được gửi đến email.");
+        return ResponseEntity.ok(response);
+    }
     public ResponseEntity<?> EmployerLogin(String email, String password) {
         Optional<User> user = userRepository.findByEmail(email);
         if(user.isEmpty()||employerRepository.findByUser(user.get()).isEmpty()){

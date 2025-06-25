@@ -91,6 +91,12 @@ public class AuthController {
         String code = body.get("code").toString();
         return userService.verifyEmail(email, code);
     }
+    @PostMapping("/sendVerificationCode")
+    @Operation(summary = "send verification code", description = "send a verification code to the email")
+    public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, Object> body) {
+        String email = body.get("email").toString();
+        return userService.sendVerificationEmailHTML(email);
+    }
     @PostMapping("/forgetPassword")
     @Operation(summary = "forget password", description = "send a verification code to the email for resetting password")
     public ResponseEntity<?> forgetPassword(@RequestBody Map<String, Object> body) {
