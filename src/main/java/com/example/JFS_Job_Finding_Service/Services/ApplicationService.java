@@ -397,15 +397,8 @@ public class ApplicationService {
         Employer employer = jwtUtil.getEmployer(token);
         Applicant applicant = applicantRepository.findById(applicantId)
                 .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
-        List<JobPost> jobPosts = jobPostRepository.findByEmployer(employer);
-        if (jobPosts.isEmpty()) {
-            return ResponseEntity.status(404).body("No job posts found for this employer");
-        }
         JobPost jobPost= jobPostRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
-        if (!jobPosts.contains(jobPost)) {
-            return ResponseEntity.status(403).body("You do not own this job post");
-        }
         Application application= applicationRepository.findByJobAndApplicant(jobPost, applicant)
                 .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
         if (application == null || !application.getStatus().equalsIgnoreCase("Accepted")) {
