@@ -138,4 +138,23 @@ public class AdminService {
         response.put("message", "Người dùng đã được mở khóa thành công");
         return ResponseEntity.ok(response);
     }
+    public ResponseEntity<?> deleteUser(String token, long userId) {
+    boolean check = jwtUtil.checkPermission(token, "Admin");
+        Map<String, Object> response = new HashMap<>();
+        if (!check) {
+            response.put("status", "fail");
+            response.put("message", "bạn không có quyền truy cập");
+            return ResponseEntity.status(403).body(response);
+        }
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            response.put("status", "fail");
+            response.put("message", "Người dùng không tồn tại");
+            return ResponseEntity.status(404).body(response);
+        }
+        userRepository.delete(user);
+        response.put("status", "success");
+        response.put("message", "Người dùng đã được xóa thành công");
+        return ResponseEntity.ok(response);
+    }
 }

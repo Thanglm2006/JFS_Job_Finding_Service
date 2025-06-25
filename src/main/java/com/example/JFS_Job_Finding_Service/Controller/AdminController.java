@@ -36,4 +36,8 @@ public class AdminController {
     public ResponseEntity<?> unbanUser(@RequestHeader HttpHeaders headers, @RequestParam("userId") Long userId) {
         return adminService.unbanUser(headers.getFirst("token"), userId);
     }
+    @PostMapping("/deleteUser")
+    public ResponseEntity<?> deleteUser(@RequestHeader HttpHeaders headers, @RequestParam("userId") Long userId) {
+        return adminService.deleteUser(headers.getFirst("token"), userId);
+    }
 }
