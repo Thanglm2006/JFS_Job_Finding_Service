@@ -1,0 +1,17 @@
+❯ docker-compose -f docker-compose.yaml -f docker-compose.dev.yml up
+WARN[0000] /home/thanglm2006/JFS/docker-compose.yaml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+WARN[0000] /home/thanglm2006/JFS/docker-compose.dev.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+Attaching to JFS-local-jar, recruitment_data-local-jar-db
+recruitment_data-local-jar-db  | 
+recruitment_data-local-jar-db  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+recruitment_data-local-jar-db  | 
+recruitment_data-local-jar-db  | 2025-11-01 05:22:19.229 UTC [1] LOG:  starting PostgreSQL 17.0 on x86_64-pc-linux-musl, compiled by gcc (Alpine 13.2.1_git20240309) 13.2.1 20240309, 64-bit
+recruitment_data-local-jar-db  | 2025-11-01 05:22:19.230 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+recruitment_data-local-jar-db  | 2025-11-01 05:22:19.230 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+recruitment_data-local-jar-db  | 2025-11-01 05:22:19.231 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+recruitment_data-local-jar-db  | 2025-11-01 05:22:19.236 UTC [29] LOG:  database system was shut down at 2025-11-01 04:20:36 UTC
+recruitment_data-local-jar-db  | 2025-11-01 05:22:19.245 UTC [1] LOG:  database system is ready to accept connections
+Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting "/home/thanglm2006/JFS/target/JFS_Job_Finding_Service-0.0.1-SNAPSHOT.jar" to rootfs at "/app.jar": mount src=/home/thanglm2006/JFS/target/JFS_Job_Finding_Service-0.0.1-SNAPSHOT.jar, dst=/app.jar, dstFd=/proc/thread-self/fd/8, flags=MS_BIND|MS_REC: not a directory: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type
+
+░▒▓   …/JFS   main ✘!+?  
+❯ 

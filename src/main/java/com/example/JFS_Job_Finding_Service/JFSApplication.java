@@ -47,6 +47,7 @@ public class JFSApplication {
             for (String repo : repos) {
                 System.out.println("✅ Repository loaded: " + repo);
             }
+            System.out.println("load repository successful!");
         };
     }
     

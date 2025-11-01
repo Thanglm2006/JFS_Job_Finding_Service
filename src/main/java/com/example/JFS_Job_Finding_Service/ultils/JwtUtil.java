@@ -43,7 +43,6 @@ public class JwtUtil {
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
-    // ✅ Extract Email from Token
     public String extractEmail(String token) {
         String subject=Jwts.parser().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody().getSubject();
         int idx=subject.indexOf("|");
