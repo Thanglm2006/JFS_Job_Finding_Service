@@ -19,6 +19,18 @@ services:
         condition: service_healthy
     networks:
       - app-network
+  mqtt:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - app-network
 
   db:
     image: groonga/pgroonga:3.2.4-alpine-17

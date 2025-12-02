@@ -13,6 +13,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -23,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
-
+//this is for saving, we use mqtt instead of these
     @Autowired
     private ChatService chatService;
 
@@ -37,7 +38,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sessions.put(id, session);
         System.out.println(id + " connected");
         long userID= Long.parseLong(id);
-        List<userInChat> users= chatService.getAllUsersChatedWith(userID);
+        List<userInChat> users= chatService.getAllUsersChattedWith(userID);
         for(userInChat u:users){
             WebSocketSession userSession = sessions.get(String.valueOf(u.getId()));
             if (userSession != null && userSession.isOpen()) {
@@ -55,20 +56,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         ))
         ));
     }
-
-//    @Override
-//    public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-//        // Format: recipient:message
-//        String[] parts = message.getPayload().split(":", 2);
-//        String recipient = parts[0];
-//        String content = parts[1];
-//        chatService.saveMessage(Long.parseLong(getId(session)), Long.parseLong(recipient), content);
-//        WebSocketSession recipientSession = sessions.get(recipient);
-//        if (recipientSession != null && recipientSession.isOpen()) {
-//            System.out.println("Sending message to " + recipient+ ": " + content);
-//            recipientSession.sendMessage(new TextMessage(getId(session) + ": " + content));
-//        }
-//    }
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
@@ -93,20 +80,25 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 break;
 
             case "image":
-                String base64Data = content.split(",")[1];
-                byte[] imageBytes = Base64.getDecoder().decode(base64Data);
-                // Write to a temporary file
-                Path tempFilePath = Files.createTempFile("upload-", Instant.now().toString());
-                Files.write(tempFilePath, imageBytes);
-                File tempFile = tempFilePath.toFile();
-                String url = cloudinaryService.uploadFile(tempFile);
-                chatService.saveImage(Long.parseLong(senderId), Long.parseLong(recipient), url);
-                if (recipientSession != null && recipientSession.isOpen()) {
-                    recipientSession.sendMessage(new TextMessage(mapper.writeValueAsString(Map.of(
-                            "type", "Image",
-                            "sender", senderId,
-                            "content", url
-                    ))));
+                File tempFile = null;
+                try {
+                    String base64Data = content.split(",")[1];
+                    byte[] imageBytes = Base64.getDecoder().decode(base64Data);
+                    // Write to a temporary file
+                    Path tempFilePath = Files.createTempFile("upload-", Instant.now().toString());
+                    Files.write(tempFilePath, imageBytes);
+                    tempFile = tempFilePath.toFile();
+                    String url = cloudinaryService.uploadFile(tempFile);
+                    chatService.saveImage(Long.parseLong(senderId), Long.parseLong(recipient), url);
+                    if (recipientSession != null && recipientSession.isOpen()) {
+                        recipientSession.sendMessage(new TextMessage(mapper.writeValueAsString(Map.of(
+                                "type", "Image",
+                                "sender", senderId,
+                                "content", url
+                        ))));
+                    }
+                } catch (IOException | NumberFormatException e) {
+                    throw new RuntimeException(e);
                 }
                 tempFile.delete();
                 break;
