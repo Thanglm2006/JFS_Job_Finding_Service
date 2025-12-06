@@ -25,9 +25,11 @@ public class ApplicationService {
     private ApplicantRepository applicantRepository;
     @Autowired
     private NotificationRepository notificationRepository;
+    @Autowired
+    private TokenService tokenService;
 
     public ResponseEntity<?> applyForJob(String token, Long jobId) {
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         if(!jwtUtil.checkWhetherIsApplicant(token)) {
@@ -48,7 +50,7 @@ public class ApplicationService {
         return ResponseEntity.ok("Application submitted successfully for job ID: " + jobId);
     }
     public ResponseEntity<?> accept(String token, Long applicationId, Long applicantId) {
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
@@ -77,7 +79,7 @@ public class ApplicationService {
         return ResponseEntity.ok("Application accepted successfully for job ID: " + job.getId());
     }
     public ResponseEntity<?> reject(String token, Long applicationId, Long applicantId) {
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {

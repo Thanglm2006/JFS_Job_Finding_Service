@@ -29,6 +29,8 @@ public class SavedJobService {
     JwtUtil jwtUtil;
     @Autowired
     private JobPostRepository jobPostRepository;
+    @Autowired
+    private TokenService tokenService;
 
     public ResponseEntity<?> saveJob(String token, Long jobId) {
 
@@ -57,7 +59,7 @@ public class SavedJobService {
     public ResponseEntity<?> getSavedJobs(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
 
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "Unauthorized access");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);

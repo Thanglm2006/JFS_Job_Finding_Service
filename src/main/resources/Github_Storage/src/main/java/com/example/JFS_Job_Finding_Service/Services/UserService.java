@@ -35,6 +35,9 @@ public class UserService {
     private ApplicantRepository applicantRepository;
     private PasswordEncoder passwordEncoder= PasswordConfig.passwordEncoder();
     private JwtUtil jwtUtil= new JwtUtil();
+    @Autowired
+    private TokenService tokenService;
+
     public User getUserById(long id){
         return userRepository.findById(id).orElse(null);
     }
@@ -165,7 +168,7 @@ public class UserService {
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> UpdateResume(String token,String email, Map<String, Object> resume) {
-        if(jwtUtil.validateToken(token, email)){
+        if(tokenService.validateToken(token, email)){
             User user=userRepository.findByEmail(email).get();
             Applicant applicant = applicantRepository.findByUser(user).get();
             if(applicant==null){
@@ -196,7 +199,7 @@ public class UserService {
     }
     public ResponseEntity<?> getProfile(String token, Long userId) {
         Map<String, Object> response = new HashMap<>();
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "Unauthorized access");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -280,7 +283,7 @@ public class UserService {
             response.put("message", "wrong password");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
-        if(!jwtUtil.validateToken(token,email)){
+        if(!tokenService.validateToken(token,email)){
             response.put("error", "Invalid token");
             response.put("message", "the token is expired or invalid");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -306,7 +309,7 @@ public class UserService {
     }
     public ResponseEntity<?> isTokenValid(String token, String email) {
         Map<String, Object> response = new HashMap<>();
-        if(jwtUtil.validateToken(token,email)){
+        if(tokenService.validateToken(token,email)){
             response.put("result", "valid");
             return new ResponseEntity<>(response, HttpStatus.OK);
         }

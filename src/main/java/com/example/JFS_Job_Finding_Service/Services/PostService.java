@@ -34,10 +34,13 @@ public class PostService {
     private EmployerRepository employerRepository;
     @Autowired
     private NotificationRepository notificationRepository;
+    @Autowired
+    private TokenService tokenService;
+
     public ResponseEntity<?> getSomePosts(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
 
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -102,7 +105,7 @@ public class PostService {
     public ResponseEntity<?> fullTextSearchPosts(String token, String pattern) {
         Map<String, Object> response = new HashMap<>();
 
-        if (!jwtUtil.validateToken(token)) {
+        if (!tokenService.validateToken(token)) {
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -176,7 +179,7 @@ public class PostService {
 
     public ResponseEntity<?> getSomePostOfEmployer(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -251,7 +254,7 @@ public class PostService {
     }
     public ResponseEntity<?> getAppliedJobs(String token, int page, int size) {
     Map<String, Object> response = new HashMap<>();
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);

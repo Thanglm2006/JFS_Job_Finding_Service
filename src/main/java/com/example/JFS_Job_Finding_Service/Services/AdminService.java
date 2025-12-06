@@ -29,6 +29,9 @@ public class AdminService {
     private JwtUtil jwtUtil;
     @Value("${secretPass}")
     private String secretPass;
+    @Autowired
+    private TokenService tokenService;
+
     public ResponseEntity<Admin> addAdmin(String secretPass,String fullName, String email, String password) {
         if (!this.secretPass.equals(secretPass)) {
             return ResponseEntity.status(403).body(null);
@@ -65,7 +68,7 @@ public class AdminService {
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> getAllUsers(String token, int page, int size) {
-        boolean check = jwtUtil.checkPermission(token, "Admin");
+        boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
         if (!check) {
             response.put("status", "fail");
@@ -89,7 +92,7 @@ public class AdminService {
         }
     }
     public ResponseEntity<?> banUser(String token, long userId) {
-        boolean check = jwtUtil.checkPermission(token, "Admin");
+        boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
         if (!check) {
             response.put("status", "fail");
@@ -114,7 +117,7 @@ public class AdminService {
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> unbanUser(String token, long userId) {
-        boolean check = jwtUtil.checkPermission(token, "Admin");
+        boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
         if (!check) {
             response.put("status", "fail");
@@ -139,7 +142,7 @@ public class AdminService {
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> deleteUser(String token, long userId) {
-    boolean check = jwtUtil.checkPermission(token, "Admin");
+    boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
         if (!check) {
             response.put("status", "fail");

@@ -36,10 +36,13 @@ public class PendingJobPostService {
     private NotificationRepository notificationRepository;
     @Autowired
     private ImageFoldersRepository imageFoldersRepository;
+    @Autowired
+    private TokenService tokenService;
+
     public ResponseEntity<?> addPost(String token, PostingRequest postingRequest) {
         Map<String, Object> response = new HashMap<>();
 
-        if(!jwtUtil.validateToken(token,jwtUtil.extractEmail(token))){
+        if(!tokenService.validateToken(token,jwtUtil.extractEmail(token))){
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -155,7 +158,7 @@ public class PendingJobPostService {
     public ResponseEntity<?> getSomePendingPosts(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
 
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);

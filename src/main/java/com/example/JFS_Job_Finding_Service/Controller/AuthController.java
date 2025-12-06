@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.Controller;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
 import com.example.JFS_Job_Finding_Service.Services.AdminService;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
+import com.example.JFS_Job_Finding_Service.Services.RedisTokenService;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
 import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +25,8 @@ public class AuthController {
     private ApplicationService applicationService;
     @Autowired
     private ApplicantRepository applicantRepository;
+    @Autowired
+    private RedisTokenService redisTokenService;
 
     @PostMapping("/register/employer")
     @Operation(summary = "User Registration", description = "Register a new user with email, password, name, and role.")
@@ -166,5 +169,13 @@ public class AuthController {
         }else{
             return ResponseEntity.status(401).body("Token is null");
         }
+    }
+    @GetMapping("/logout")
+    @Operation(summary = "move token to blacklist")
+    public ResponseEntity<?> moveTokenToBlacklist(@RequestHeader HttpHeaders headers) {
+        if(headers!=null && headers.get("token")!=null){
+            return redisTokenService.blacklistToken(headers.getFirst("token"));
+        }
+        else return ResponseEntity.ok().build();
     }
 }

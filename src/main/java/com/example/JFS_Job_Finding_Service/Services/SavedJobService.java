@@ -35,13 +35,15 @@ public class SavedJobService {
     private ApplicantRepository applicantRepository;
     @Autowired
     private ImageFoldersRepository imageFoldersRepository;
+    @Autowired
+    private TokenService tokenService;
 
 
     public ResponseEntity<?> saveJob(String token, String jobId) {
 
         Map<String, Object> response = new HashMap<>();
 
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "Unauthorized access");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -65,7 +67,7 @@ public class SavedJobService {
     public ResponseEntity<?> unSaveJob(String token, String jobId) {
         Map<String, Object> response = new HashMap<>();
 
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "Unauthorized access");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -99,7 +101,7 @@ public class SavedJobService {
     public ResponseEntity<?> getSavedJobs(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
 
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "Unauthorized access");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);

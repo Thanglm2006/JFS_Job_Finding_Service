@@ -3,6 +3,8 @@ package com.example.JFS_Job_Finding_Service.Controller;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.ApplicantResponse;
 import com.example.JFS_Job_Finding_Service.DTO.SetScheduleRequest;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
+import com.example.JFS_Job_Finding_Service.Services.EmployeeService;
+import com.example.JFS_Job_Finding_Service.Services.ScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,11 @@ import org.springframework.web.bind.annotation.*;
 public class ApplicationController {
     @Autowired
     private ApplicationService applicationService;
+    @Autowired
+    private ScheduleService scheduleService;
+    @Autowired
+    private EmployeeService employeeService;
+
     @PostMapping("/apply")
     public ResponseEntity<?> applyForJob(
             @RequestHeader HttpHeaders headers,
@@ -46,13 +53,13 @@ public class ApplicationController {
             @RequestHeader HttpHeaders headers,
             @RequestBody SetScheduleRequest setScheduleRequest
             ) {
-        return applicationService.setSchedule(headers.getFirst("token"), setScheduleRequest.getApplicantId(), setScheduleRequest.getJobId(), setScheduleRequest.getSchedules());
+        return scheduleService.setSchedule(headers.getFirst("token"), setScheduleRequest.getApplicantId(), setScheduleRequest.getJobId(), setScheduleRequest.getSchedules());
     }
     @GetMapping("getStaffsForEmployer")
     public ResponseEntity<?> getStaffsForEmployer(
             @RequestHeader HttpHeaders headers
     ) {
-        return applicationService.getStaffsForEmployer(headers.getFirst("token"));
+        return employeeService.getStaffsForEmployer(headers.getFirst("token"));
     }
     @GetMapping("getJobs")
     public ResponseEntity<?> getJobs(
@@ -66,13 +73,13 @@ public class ApplicationController {
     public ResponseEntity<?> getSchedulesForApplicant(
             @RequestHeader HttpHeaders headers
     ) {
-        return applicationService.getSchedulesForApplicant(headers.getFirst("token"));
+        return scheduleService.getSchedulesForApplicant(headers.getFirst("token"));
     }
     @PostMapping("deleteStaff")
     public ResponseEntity<?> deleteStaff(
             @RequestHeader HttpHeaders headers,
             @RequestBody ApplicantResponse applicantResponse
     ) {
-        return applicationService.deletestaff(headers.getFirst("token"),  applicantResponse.getApplicantId(),applicantResponse.getJobId());
+        return employeeService.deletestaff(headers.getFirst("token"),  applicantResponse.getApplicantId(),applicantResponse.getJobId());
     }
 }

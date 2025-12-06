@@ -1,5 +1,6 @@
 package com.example.JFS_Job_Finding_Service.ultils;
 
+import com.example.JFS_Job_Finding_Service.Services.RedisTokenService;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
 import com.example.JFS_Job_Finding_Service.models.Applicant;
 import com.example.JFS_Job_Finding_Service.models.Employer;
@@ -109,7 +110,7 @@ public class JwtUtil {
         return trueEmail.equals(userEmail) && !isTokenExpired(token);
     }
 
-    private boolean isTokenExpired(String token) {
+    public boolean isTokenExpired(String token) {
         Date expiration = Jwts.parser()
                 .setSigningKey(getSigningKey())
                 .build()
@@ -117,5 +118,14 @@ public class JwtUtil {
                 .getBody()
                 .getExpiration();
         return expiration.before(new Date());
+    }
+
+    public Date extractExpiration(String token) {
+        return Jwts.parser()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
     }
 }

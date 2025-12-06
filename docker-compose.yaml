@@ -21,6 +21,21 @@ services:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+  redis:
+    image: redis:alpine
+    container_name: jfs-redis-blacklist
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - app-network
   mqtt:
     image: eclipse-mosquitto:latest
     container_name: mosquitto

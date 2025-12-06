@@ -35,13 +35,17 @@ public class UserService {
     @Autowired
     private ApplicantRepository applicantRepository;
     private PasswordEncoder passwordEncoder= PasswordConfig.passwordEncoder();
-    private JwtUtil jwtUtil= new JwtUtil();
+    @Autowired
+    private JwtUtil jwtUtil;
     @Autowired
     private CloudinaryService cloudinaryService;
     @Autowired
     private MailService mailService;
     private final Map<String, VerificationInfo> passwordResetMap = new HashMap<>();
     private final Map<String, PendingRegister> pendingRegisterMap = new HashMap<>();
+    @Autowired
+    private TokenService tokenService;
+
     private String generateVerificationCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder code = new StringBuilder();
@@ -341,7 +345,7 @@ public class UserService {
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> UpdateResume(String token,String email, Map<String, Object> resume) {
-        if(jwtUtil.validateToken(token, email)){
+        if(tokenService.validateToken(token, email)){
             User user=userRepository.findByEmail(email).get();
             Applicant applicant = applicantRepository.findByUser(user).get();
             if(applicant==null){
@@ -372,7 +376,7 @@ public class UserService {
     }
     public ResponseEntity<?> updateAvatar(String token, MultipartFile file) {
         Map<String, Object> response = new HashMap<>();
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "Unauthorized access");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -398,7 +402,7 @@ public class UserService {
     }
     public ResponseEntity<?> getProfile(String token, Long userId) {
         Map<String, Object> response = new HashMap<>();
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "Unauthorized access");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -451,7 +455,7 @@ public class UserService {
         }
     }
     public ResponseEntity<?> updateProfile(String token, UpdateProfile dto) {
-        boolean check=jwtUtil.validateToken(token);
+        boolean check=tokenService.validateToken(token);
         if(!check){
             Map<String, Object> response = new HashMap<>();
             response.put("status", "fail");
@@ -561,7 +565,7 @@ public class UserService {
             response.put("message", "wrong password");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
-        if(!jwtUtil.validateToken(token,email)){
+        if(!tokenService.validateToken(token,email)){
             response.put("error", "Invalid token");
             response.put("message", "the token is expired or invalid");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -587,7 +591,7 @@ public class UserService {
     }
     public ResponseEntity<?> isTokenValid(String token, String email) {
         Map<String, Object> response = new HashMap<>();
-        if(jwtUtil.validateToken(token,email)){
+        if(tokenService.validateToken(token,email)){
             response.put("result", "valid");
             return new ResponseEntity<>(response, HttpStatus.OK);
         }

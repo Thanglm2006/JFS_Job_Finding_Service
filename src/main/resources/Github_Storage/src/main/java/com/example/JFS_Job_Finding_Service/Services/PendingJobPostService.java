@@ -26,10 +26,12 @@ public class PendingJobPostService {
     private JobPostRepository jobPostRepository;
     @Autowired
     private NotificationRepository notificationRepository;
+    @Autowired
+    private TokenService tokenService;
 
     public ResponseEntity<?> addPost(String token, PostingRequest postingRequest) {
         Map<String, Object> response = new HashMap<>();
-        if(!jwtUtil.validateToken(token,jwtUtil.extractEmail(token))){
+        if(!tokenService.validateToken(token,jwtUtil.extractEmail(token))){
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);

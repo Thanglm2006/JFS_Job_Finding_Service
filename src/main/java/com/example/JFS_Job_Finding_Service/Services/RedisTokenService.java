@@ -1,7 +1,14 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
+import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -9,16 +16,29 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class RedisTokenService {
     @Autowired
-    private StringRedisTemplate redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
 
-    private static final String BLACKLIST_PREFIX = "blacklist:"; // Prefix for blacklist keys
+    @Autowired
+    private JwtUtil jwtUtil; // Your existing Utils class
 
-    // ❌ Add token to Redis blacklist with expiration time
-    public void blacklistToken(String token, long expirationSeconds) {
-        redisTemplate.opsForValue().set(BLACKLIST_PREFIX + token, "blacklisted", expirationSeconds, TimeUnit.SECONDS);
+    private static final String BLACKLIST_PREFIX = "BLACKLIST_";
+
+    public ResponseEntity<?> blacklistToken(String token) {
+        String email = jwtUtil.extractEmail(token);
+        Date expirationDate = jwtUtil.extractExpiration(token);
+        long timeToLive = expirationDate.getTime() - System.currentTimeMillis();
+
+        if (timeToLive > 0) {
+            redisTemplate.opsForValue().set(
+                    BLACKLIST_PREFIX + token,
+                    email,
+                    timeToLive,
+                    TimeUnit.MILLISECONDS
+            );
+        }
+        return ResponseEntity.ok().build();
     }
 
-    // ✅ Check if token is blacklisted
     public boolean isTokenBlacklisted(String token) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
     }

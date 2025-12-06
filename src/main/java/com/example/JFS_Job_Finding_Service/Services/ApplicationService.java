@@ -36,9 +36,11 @@ public class ApplicationService {
     private ImageFoldersRepository imageFoldersRepository;
     @Autowired
     private ScheduleRepository scheduleRepository;
+    @Autowired
+    private TokenService tokenService;
 
     public ResponseEntity<?> applyForJob(String token, String jobId, String position) {
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         if(!jwtUtil.checkWhetherIsApplicant(token)) {
@@ -63,7 +65,7 @@ public class ApplicationService {
         return ResponseEntity.ok("Application submitted successfully for job ID: " + jobId);
     }
     public ResponseEntity<?> unApplyForJob(String token, String jobId) {
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         if(!jwtUtil.checkWhetherIsApplicant(token)) {
@@ -84,7 +86,7 @@ public class ApplicationService {
         return ResponseEntity.ok("Application withdrawn successfully for job ID: " + jobId);
     }
     public ResponseEntity<?> accept(String token, String jobId, String applicantId) {
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
@@ -115,7 +117,7 @@ public class ApplicationService {
         return ResponseEntity.ok("Application accepted successfully for job ID: " + job.getId());
     }
     public ResponseEntity<?> reject(String token, String jobId, String applicantId) {
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
@@ -144,88 +146,9 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application rejected for applicant " + applicant.getUser().getFullName());
     }
-    public ResponseEntity<?> setSchedule(String token,String applicantId, String jobId, List<Schedule> schedules) {
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
-        }
-        if(!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to set schedules");
-        }
-        //check if intersection in schedules
-        if (schedules == null || schedules.isEmpty()) {
-            return ResponseEntity.badRequest().body("Schedules cannot be empty");
-        }
-        if (schedules.stream().anyMatch(schedule -> schedule.getStartTime() >= schedule.getEndTime())) {
-            return ResponseEntity.badRequest().body("Start time cannot be after end time");
-        }
-        if (schedules.stream().anyMatch(schedule -> schedule.getDay() == null || !schedule.getDay().matches("^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$"))) {
-            return ResponseEntity.badRequest().body("Invalid day of the week in schedules");
-        }
-        if (schedules.stream().anyMatch(schedule -> schedule.getDescription() == null || schedule.getDescription().isEmpty())) {
-            return ResponseEntity.badRequest().body("Schedule description cannot be empty");
-        }
-        if (schedules.stream().anyMatch(schedule -> schedule.getStartTime() < 0 || schedule.getEndTime() < 0)) {
-            return ResponseEntity.badRequest().body("Start time and end time must be non-negative");
-        }
-        for (int i = 0; i < schedules.size(); i++) {
-            Schedule s1 = schedules.get(i);
-            for (int j = i + 1; j < schedules.size(); j++) {
-                Schedule s2 = schedules.get(j);
-                if (s1.getDay().equals(s2.getDay()) &&
-                        s1.getStartTime() <= s2.getEndTime() &&
-                        s2.getStartTime() < s1.getEndTime()) {
-                    return ResponseEntity.badRequest().body("Schedules conflict on " + s1.getDay() + " between " + s1.getStartTime() + " and " + s1.getEndTime());
-                }
-            }
-        }
-        Applicant applicant = applicantRepository.findById(applicantId)
-                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
-        JobPost job = jobPostRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
-        List<com.example.JFS_Job_Finding_Service.models.Schedule> schedulesForJob = scheduleRepository.findByJob(job);
-        if (schedulesForJob != null && !schedulesForJob.isEmpty()) {
-            scheduleRepository.deleteAll(schedulesForJob);
-        }
-        List<com.example.JFS_Job_Finding_Service.models.Schedule> existingSchedules = scheduleRepository.findByApplicant(applicant);
 
-        for( Schedule schedule : schedules) {
-            if (schedule.getStartTime()>=(schedule.getEndTime())) {
-                return ResponseEntity.badRequest().body("Start time cannot be after end time");
-            }
-            if(schedule.getDay()!=null && !schedule.getDay().matches("^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$")) {
-                return ResponseEntity.badRequest().body("Invalid day of the week: " + schedule.getDay());
-            }
-            for( com.example.JFS_Job_Finding_Service.models.Schedule existingSchedule : existingSchedules) {
-                if (existingSchedule.getDay().equals(schedule.getDay()) &&
-                        ((schedule.getStartTime() >= existingSchedule.getStartTime() && schedule.getStartTime() <= existingSchedule.getEndTime()) ||
-                                (schedule.getEndTime() >= existingSchedule.getStartTime() && schedule.getEndTime() <= existingSchedule.getEndTime()))) {
-                    System.out.println("Schedule conflicts with existing schedule on " + existingSchedule.getDay() + " from " + existingSchedule.getStartTime() + " to " + existingSchedule.getEndTime() + "and another shift" + schedule.getStartTime() + " to " + schedule.getEndTime());
-                    return ResponseEntity.badRequest().body("Schedule conflicts with existing schedule on " + schedule.getDay());
-                }
-            }
-            try{
-                com.example.JFS_Job_Finding_Service.models.Schedule scheduleModel = new com.example.JFS_Job_Finding_Service.models.Schedule();
-                scheduleModel.setApplicant(applicant);
-                scheduleModel.setJob(job);
-                scheduleModel.setStartTime(schedule.getStartTime());
-                scheduleModel.setEndTime(schedule.getEndTime());
-                scheduleModel.setDay(schedule.getDay());
-                scheduleModel.setDescription(schedule.getDescription());
-                Notification notification = new Notification();
-                notification.setUser(applicant.getUser());
-                notification.setMessage("Lịch làm việc đã được chỉnh sửa" + job.getTitle() + " bởi " + job.getEmployer().getUser().getFullName());
-                notification.setRead(false);
-                notification.setCreatedAt(Instant.now());
-                scheduleRepository.save(scheduleModel);
-                notificationRepository.save(notification);
-            } catch (Exception e) {
-                return ResponseEntity.badRequest().body("Schedule could not be saved, invalid schedule data");
-            }
-        }
-        return ResponseEntity.status(200).body("Application Schedule saved");
-    }
     public ResponseEntity<?> getAllApplicationForEmployer(String token){
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
@@ -298,55 +221,10 @@ public class ApplicationService {
         response.put("applications", applications);
         return ResponseEntity.ok(response);
     }
-    public ResponseEntity<?> getStaffsForEmployer(String token){
-        HashMap<String, Object> response = new HashMap<>();
-        if(!jwtUtil.checkPermission(token, "Employer")){
-            response.put("status", "fail");
-            response.put("message", "You do not have permission to view staffs");
-            return ResponseEntity.status(403).body(response);
-        }
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
-            response.put("status", "fail");
-            response.put("message", "Unauthorized access");
-            return ResponseEntity.status(401).body(response);
-        }
-        Employer employer = jwtUtil.getEmployer(token);
-        if (employer == null) {
-            response.put("status", "fail");
-            response.put("message", "Employer not found");
-            return ResponseEntity.status(404).body(response);
-        }
-        List<JobPost> jobPosts = jobPostRepository.findByEmployer(employer);
-        if (jobPosts.isEmpty()) {
-            response.put("status", "fail");
-            response.put("message", "No job posts found for this employer");
-            return ResponseEntity.ok(response);
-        }
-        List<Map<String,Object>> staffs = new ArrayList<>();
-        for(JobPost jobPost : jobPosts){
-            List<Application> applications = applicationRepository.findByJobAndStatus(jobPost, "Accepted");
-            for(Application application : applications) {
-                Map<String, Object> staffData = new HashMap<>();
-                Applicant applicant = application.getApplicant();
-                staffData.put("applicantId", applicant.getId());
-                staffData.put("applicantName", applicant.getUser().getFullName());
-                staffData.put("avatar", applicant.getUser().getAvatarUrl());
-                staffData.put("jobId", jobPost.getId());
-                staffData.put("position", application.getPosition());
-                staffData.put("appliedAt", application.getAppliedAt());
-                staffData.put("applicantUserID", applicant.getUser().getId());
-                List<com.example.JFS_Job_Finding_Service.models.Schedule> schedules = scheduleRepository.findByApplicantAndJob(applicant, jobPost);
-                staffData.put("schedules", schedules);
-                staffs.add(staffData);
-            }
-        }
-        response.put("status", "success");
-        response.put("staffs", staffs);
-        return ResponseEntity.ok(response);
-    }
+
     public ResponseEntity<?> getJobs(String token, int page, int size) {
         Map<String, Object> response = new HashMap<>();
-        if (!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
             response.put("message", "bạn không có quyền truy cập");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
@@ -386,61 +264,5 @@ public class ApplicationService {
         response.put("totalApplicationsCount", applicationPage.getTotalElements());
         response.put("pageSize", applicationPage.getSize());
         return new ResponseEntity<>(response, HttpStatus.OK);
-    }
-    public ResponseEntity<?> deletestaff(String token, String applicantId, String jobId){
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
-        }
-        if(!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to delete staff");
-        }
-        Employer employer = jwtUtil.getEmployer(token);
-        Applicant applicant = applicantRepository.findById(applicantId)
-                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
-        JobPost jobPost= jobPostRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
-        Application application= applicationRepository.findByJobAndApplicant(jobPost, applicant)
-                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
-        if (application == null || !application.getStatus().equalsIgnoreCase("Accepted")) {
-            return ResponseEntity.status(404).body("Application not found or not accepted for this job post");
-
-        }
-        applicationRepository.delete(application);
-        Notification notification = new Notification();
-        notification.setUser(applicant.getUser());
-        notification.setMessage("Bạn đã bị đuổi việc " + application.getPosition() + " bởi " + employer.getUser().getFullName());
-        notification.setRead(false);
-        notificationRepository.save(notification);
-        return ResponseEntity.ok("Staff deleted successfully");
-    }
-    public ResponseEntity<?> getSchedulesForApplicant(String token){
-        if(!jwtUtil.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
-        }
-        if(!jwtUtil.checkWhetherIsApplicant(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to view schedules");
-        }
-        Applicant applicant = jwtUtil.getApplicant(token);
-        if (applicant == null) {
-            return ResponseEntity.status(404).body("Applicant not found");
-        }
-        List<com.example.JFS_Job_Finding_Service.models.Schedule> schedules = scheduleRepository.findByApplicant(applicant);
-        schedules.sort(Comparator.comparingInt(com.example.JFS_Job_Finding_Service.models.Schedule::getStartTime));
-        if (schedules.isEmpty()) {
-            return ResponseEntity.ok("No schedules found for this applicant");
-        }
-        //take schedules of each day
-        Map<String, List<com.example.JFS_Job_Finding_Service.models.Schedule>> schedulesByDay = new HashMap<>();
-        for (com.example.JFS_Job_Finding_Service.models.Schedule schedule : schedules) {
-            String day = schedule.getDay();
-            if (!schedulesByDay.containsKey(day)) {
-                schedulesByDay.put(day, new ArrayList<>());
-            }
-            schedulesByDay.get(day).add(schedule);
-        }
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("schedules", schedulesByDay);
-        return ResponseEntity.ok(response);
     }
 }
