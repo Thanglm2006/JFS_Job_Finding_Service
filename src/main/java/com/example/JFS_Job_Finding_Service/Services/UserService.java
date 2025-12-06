@@ -277,7 +277,7 @@ public class UserService {
         Optional<Employer> u=employerRepository.findByUser(user.get());
         String token=jwtUtil.generateToken(user.get().getEmail(),user.get().getRole());
         Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
+        response.put("status", "successfully logged in");
         response.put("token", token);
         response.put("user", user.get());
         u.ifPresent(employer -> response.put("employer", employer));

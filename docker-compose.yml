@@ -2,19 +2,34 @@ version: '3.8'
 
 services:
   app:
-    container_name: JFS-local-jar
-    image: eclipse-temurin:21-jdk
+    container_name: JFS
+    image: maven:3.9-eclipse-temurin-21
     ports:
       - "8080:8080"
     volumes:
-      - ./target/JFS_Job_Finding_Service-0.0.1-SNAPSHOT.jar:/app/application.jar
-    command: ["java", "-jar", "/app/application.jar"]
+      # 2. Mount the WHOLE project directory to /app (so Maven can see pom.xml and src)
+      - .:/app
+      # 3. Mount your local Maven cache so it doesn't download JARs every time (Speed boost)
+      - ~/.m2:/root/.m2
+    working_dir: /app
+    command: >
+      /bin/sh -c "
+        if [ ! -f target/JFS_Job_Finding_Service-0.0.1-SNAPSHOT.jar ]; then
+          echo '⚠️ JAR not found! Building with Maven...';
+          mvn clean package -DskipTests;
+        fi;
+        echo '✅ Starting Application...';
+        java -jar target/JFS_Job_Finding_Service-0.0.1-SNAPSHOT.jar
+      "
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/recruitment_data
       - SPRING_DATASOURCE_USERNAME=Thang#2006
       - SPRING_DATASOURCE_PASSWORD=Thang#2006
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_MQTT_URL=tcp://mqtt:1883
     depends_on:
       db:
         condition: service_healthy
@@ -41,7 +56,7 @@ services:
       - app-network
   mqtt:
     image: eclipse-mosquitto:latest
-    container_name: mosquitto-dev
+    container_name: mosquitto
     ports:
       - "1883:1883"
       - "9001:9001"
@@ -54,7 +69,7 @@ services:
 
   db:
     image: groonga/pgroonga:3.2.4-alpine-17
-    container_name: recruitment_data-local-jar-db
+    container_name: recruitment_data
     volumes:
       - postgres-data-dev:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
