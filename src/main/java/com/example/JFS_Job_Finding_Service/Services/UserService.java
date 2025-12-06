@@ -73,7 +73,7 @@ public class UserService {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        if (name == null || !name.matches("^[a-zA-Z ]+$")) {
+        if (name == null || !name.matches("^[\\p{L} ]+$")) {
             response.put("error", "Invalid name format");
             response.put("message", "Tên chỉ được chứa chữ cái và khoảng trắng.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
@@ -148,7 +148,8 @@ public class UserService {
 
     public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Date dateOfBirth, String gender) {
         Map<String, Object> response = new HashMap<>();
-
+        System.out.println(password);
+        System.out.println(confirmPass);
         if (!password.equals(confirmPass)) {
             response.put("error", "no matching password");
             response.put("message", "Mật khẩu không khớp!");
@@ -161,7 +162,7 @@ public class UserService {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        if (name == null || !name.matches("^[a-zA-Z ]+$")) {
+        if (name == null || !name.matches("^[\\p{L} ]+$")) {
             response.put("error", "Invalid name format");
             response.put("message", "Tên chỉ được chứa chữ cái và khoảng trắng.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);

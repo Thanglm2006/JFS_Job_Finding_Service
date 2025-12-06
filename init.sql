@@ -12,7 +12,7 @@ CREATE TYPE employer_type AS ENUM (
 /* Create tables with constraints */
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    full_name TEXT NOT NULL CHECK (full_name ~ '^[a-zA-Z ]+$'),
+    full_name TEXT NOT NULL CHECK (full_name ~ '^[\p{L} ]+$'),
     email TEXT UNIQUE NOT NULL CHECK (
         email ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
     ),
