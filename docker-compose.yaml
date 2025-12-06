@@ -19,6 +19,8 @@ services:
         condition: service_healthy
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   mqtt:
     image: eclipse-mosquitto:latest
     container_name: mosquitto

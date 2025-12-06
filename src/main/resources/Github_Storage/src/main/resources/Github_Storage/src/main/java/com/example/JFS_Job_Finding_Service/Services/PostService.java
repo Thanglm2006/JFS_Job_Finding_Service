@@ -1,10 +1,8 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.example.JFS_Job_Finding_Service.DTO.PostingRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.JobPost;
-import com.example.JFS_Job_Finding_Service.repository.EmployerRepository;
 import com.example.JFS_Job_Finding_Service.repository.JobPostRepository;
-import com.example.JFS_Job_Finding_Service.repository.UserRepository;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

@@ -1,6 +1,7 @@
 package com.example.JFS_Job_Finding_Service.Services;
-import com.example.JFS_Job_Finding_Service.DTO.PendingRegister;
-import com.example.JFS_Job_Finding_Service.DTO.UpdateProfile;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.PendingRegister;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.UpdateProfile;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.VerifyEmailDTO;
 import com.example.JFS_Job_Finding_Service.models.Applicant;
 import com.example.JFS_Job_Finding_Service.models.Employer;
 import com.example.JFS_Job_Finding_Service.models.employer_type;
@@ -14,13 +15,15 @@ import com.example.JFS_Job_Finding_Service.repository.UserRepository;
 import jakarta.mail.MessagingException;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -52,67 +55,174 @@ public class UserService {
         return userRepository.findById(id).orElse(null);
     }
     public ResponseEntity<?> EmployerRegister(String email, String password, String confirmPass, String name, String employerType, Date dateOfBirth, String gender) {
-
         Map<String, Object> response = new HashMap<>();
+
+        if (!password.equals(confirmPass)) {
+            response.put("error", "Password mismatch");
+            response.put("message", "Mật khẩu không khớp!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        if (userRepository.findByEmail(email).isPresent()) {
+            response.put("error", "Duplicate email");
+            response.put("message", "Email này đã được sử dụng!");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        if (name == null || !name.matches("^[a-zA-Z ]+$")) {
+            response.put("error", "Invalid name format");
+            response.put("message", "Tên chỉ được chứa chữ cái và khoảng trắng.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        if (dateOfBirth != null) {
+            LocalDate birthDate = dateOfBirth.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate currentDate = LocalDate.now();
+            int age = Period.between(birthDate, currentDate).getYears();
+
+            if (age < 15) {
+                response.put("error", "Age violation");
+                response.put("message", "Bạn phải từ 15 tuổi trở lên để đăng ký.");
+                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            response.put("error", "Missing Date");
+            response.put("message", "Vui lòng nhập ngày sinh.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        String normalizedGender = (gender != null) ? gender.toLowerCase() : "";
+        if (!List.of("male", "female", "other").contains(normalizedGender)) {
+            response.put("error", "Invalid gender");
+            response.put("message", "Giới tính không hợp lệ (male, female, other).");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setFullName(name);
+        user.setDateOfBirth(dateOfBirth);
+        user.setGender(normalizedGender);
+        user.setRole("Employer");
+
+        Employer employer = new Employer();
+        employer.setUser(user);
+
+        try {
+            employer.setType(employer_type.valueOf(employerType));
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            employer.setType(employer_type.Other);
+            employer.setCustomType(employerType);
+        }
+
+        pendingRegisterMap.remove(email);
+        PendingRegister pendingRegister = new PendingRegister();
+        pendingRegister.setUser(user);
+        pendingRegister.setEmployer(employer);
+
+        String code = generateVerificationCode();
+        long expiryTime = System.currentTimeMillis() + 5 * 60 * 1000;
+        pendingRegister.setCode(code);
+        pendingRegister.setExpireTime(expiryTime);
+
+        try {
+            mailService.sendVerificationEmailHTML(email, code);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            response.put("error", "Mail send failed");
+            response.put("message", "Không thể gửi email xác nhận. Vui lòng kiểm tra lại email hoặc thử lại sau.");
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        pendingRegisterMap.put(email, pendingRegister);
+
+        response.put("status", "success");
+        response.put("message", "Mã xác nhận đã được gửi. Vui lòng kiểm tra email!");
+        return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Date dateOfBirth, String gender) {
+        Map<String, Object> response = new HashMap<>();
+
         if (!password.equals(confirmPass)) {
             response.put("error", "no matching password");
             response.put("message", "Mật khẩu không khớp!");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        if(userRepository.findByEmail(email).isPresent()){
+        if (userRepository.findByEmail(email).isPresent()) {
             response.put("error", "Duplicate email");
             response.put("message", "Email này đã được sử dụng bởi một tài khoản khác!");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
-        User user=new User();
+
+        if (name == null || !name.matches("^[a-zA-Z ]+$")) {
+            response.put("error", "Invalid name format");
+            response.put("message", "Tên chỉ được chứa chữ cái và khoảng trắng.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        if (dateOfBirth != null) {
+            LocalDate birthDate = dateOfBirth.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate currentDate = LocalDate.now();
+            int age = Period.between(birthDate, currentDate).getYears();
+
+            if (age < 15) {
+                response.put("error", "Age violation");
+                response.put("message", "Bạn phải từ 15 tuổi trở lên để đăng ký.");
+                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            response.put("error", "Missing Date");
+            response.put("message", "Vui lòng nhập ngày sinh.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        String normalizedGender = (gender != null) ? gender.toLowerCase() : "";
+        if (!List.of("male", "female", "other").contains(normalizedGender)) {
+            response.put("error", "Invalid gender");
+            response.put("message", "Giới tính không hợp lệ (male, female, other).");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        User user = new User();
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(name);
         user.setDateOfBirth(dateOfBirth);
-        user.setGender(gender);
-        user.setRole("Employer");
+        user.setGender(normalizedGender);
+        user.setRole("Applicant");
+
+        Applicant applicant = Applicant.builder().user(user).build();
+
         pendingRegisterMap.remove(email);
-        PendingRegister pendingRegister=new PendingRegister();
-        try{
-            pendingRegister.setUser(user);
-        }catch (DataIntegrityViolationException e){
-            response.put("error", "Email invalid");
-            response.put("message", "Email không hợp lệ!");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-        boolean exists = false;
+        PendingRegister pendingRegister = new PendingRegister();
+        pendingRegister.setUser(user);
+        pendingRegister.setApplicant(applicant);
 
-        try {
-            employer_type.valueOf(employerType);
-            exists = true;
-        } catch (IllegalArgumentException ex) {
-
-        }
-
-        Employer employer;
-        if(exists)employer=Employer.builder().user(user).type(employer_type.valueOf(employerType)).build();
-        else {
-            employer = Employer.builder().user(user).type(employer_type.Other).build();
-            employer.setCustomType(employerType);
-        }
-        try {
-            pendingRegister.setEmployer(employer);
-        }catch (DataIntegrityViolationException e){
-            response.put("error", "something went wrong");
-            response.put("message", "lỗi xảy ra khi tạo employer");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
         String code = generateVerificationCode();
         long expiryTime = System.currentTimeMillis() + 5 * 60 * 1000;
         pendingRegister.setCode(code);
         pendingRegister.setExpireTime(expiryTime);
+
+        try {
+            mailService.sendVerificationEmailHTML(email, code);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            response.put("error", "Mail send failed");
+            response.put("message", "Không thể gửi email xác nhận. Vui lòng kiểm tra lại email hoặc thử lại sau.");
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
         pendingRegisterMap.put(email, pendingRegister);
-        mailService.sendVerificationEmailHTML(email, code);
+
         response.put("status", "success");
         response.put("message", "Một mã xác nhận đã được gửi đến email của bạn. Vui lòng kiểm tra email để hoàn tất đăng ký!");
         return ResponseEntity.ok(response);
     }
+
+
     public ResponseEntity<?> sendVerificationEmailHTML(String email) {
         Map<String, Object> response = new HashMap<>();
         PendingRegister pendingRegister = pendingRegisterMap.get(email);
@@ -131,7 +241,11 @@ public class UserService {
         pendingRegister.setCode(code);
         pendingRegister.setExpireTime(System.currentTimeMillis() + 5 * 60 * 1000);
         pendingRegisterMap.put(email, pendingRegister);
-        mailService.sendVerificationEmailHTML(email, code);
+        try {
+            mailService.sendVerificationEmailHTML(email, code);
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
         response.put("status", "success");
         response.put("message", "Mã xác nhận đã được gửi đến email.");
         return ResponseEntity.ok(response);
@@ -165,54 +279,7 @@ public class UserService {
         u.ifPresent(employer -> response.put("employer", employer));
         return ResponseEntity.ok(response);
     }
-    public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Date dateOfBirth, String gender) {
 
-        Map<String, Object> response = new HashMap<>();
-        if (!password.equals(confirmPass)) {
-            response.put("error", "no matching password");
-            response.put("message", "Mật khẩu không khớp!");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-
-        if(userRepository.findByEmail(email).isPresent()){
-            response.put("error", "Duplicate email");
-            response.put("message", "Email này đã được sử dụng bởi một tài khoản khác!");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-        User user=new User();
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setFullName(name);
-        user.setDateOfBirth(dateOfBirth);
-        user.setGender(gender);
-        user.setRole("Applicant");
-        pendingRegisterMap.remove(email);
-        PendingRegister pendingRegister=new PendingRegister();
-        try{
-            pendingRegister.setUser(user);
-        }catch (DataIntegrityViolationException e){
-            response.put("error", "Email invalid");
-            response.put("message", "Email không hợp lệ!");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-        Applicant applicant=Applicant.builder().user(user).build();
-        try {
-            pendingRegister.setApplicant(applicant);
-        }catch (DataIntegrityViolationException e){
-            response.put("error", "something went wrong");
-            response.put("message", "lỗi xảy ra khi tạo applicant");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-        String code = generateVerificationCode();
-        long expiryTime = System.currentTimeMillis() + 5 * 60 * 1000;
-        pendingRegister.setCode(code);
-        pendingRegister.setExpireTime(expiryTime);
-        pendingRegisterMap.put(email, pendingRegister);
-        mailService.sendVerificationEmailHTML(email, code);
-        response.put("status", "success");
-        response.put("message", "Một mã xác nhận đã được gửi đến email của bạn. Vui lòng kiểm tra email để hoàn tất đăng ký!");
-        return ResponseEntity.ok(response);
-    }
     public ResponseEntity<?> ApplicantLogin(String email, String password) {
         Optional<User> user = userRepository.findByEmail(email);
         if(user.isEmpty()||applicantRepository.findByUser(user.get()).isEmpty()){
@@ -242,9 +309,9 @@ public class UserService {
         u.ifPresent(applicant -> response.put("applicant", applicant));
         return ResponseEntity.ok(response);
     }
-    public ResponseEntity<?> verifyEmail(String email, String code) {
+    public ResponseEntity<?> verifyEmail(VerifyEmailDTO verifyEmailDTO) {
         Map<String, Object> response = new HashMap<>();
-        PendingRegister pendingRegister = pendingRegisterMap.get(email);
+        PendingRegister pendingRegister = pendingRegisterMap.get(verifyEmailDTO.getEmail());
         if (pendingRegister == null) {
             response.put("error", "Invalid");
             response.put("message", "Mã xác nhận không hợp lệ!");
@@ -255,7 +322,7 @@ public class UserService {
             response.put("message","Mã hết hạn!");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
-        if (!pendingRegister.getCode().equalsIgnoreCase(code)) {
+        if (!pendingRegister.getCode().equalsIgnoreCase(verifyEmailDTO.getCode())) {
             response.put("error", "Wrong code");
             response.put("message", "Mã xác nhận không đúng.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
@@ -268,7 +335,7 @@ public class UserService {
         } else {
             employerRepository.save(pendingRegister.getEmployer());
         }
-        pendingRegisterMap.remove(email);
+        pendingRegisterMap.remove(verifyEmailDTO.getEmail());
         response.put("status", "success");
         response.put("message", "Xác minh email thành công!");
         return ResponseEntity.ok(response);

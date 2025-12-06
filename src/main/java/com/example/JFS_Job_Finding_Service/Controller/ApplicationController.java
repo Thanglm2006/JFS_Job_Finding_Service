@@ -1,16 +1,12 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
-import com.example.JFS_Job_Finding_Service.DTO.ApplicantResponse;
-import com.example.JFS_Job_Finding_Service.DTO.Schedule;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.ApplicantResponse;
 import com.example.JFS_Job_Finding_Service.DTO.SetScheduleRequest;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/application")

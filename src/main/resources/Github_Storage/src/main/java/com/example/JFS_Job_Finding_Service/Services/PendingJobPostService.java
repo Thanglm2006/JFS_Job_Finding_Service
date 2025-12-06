@@ -1,6 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.example.JFS_Job_Finding_Service.DTO.PostingRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.JobPost;
 import com.example.JFS_Job_Finding_Service.models.Notification;
 import com.example.JFS_Job_Finding_Service.models.PendingJobPost;
@@ -8,7 +8,6 @@ import com.example.JFS_Job_Finding_Service.repository.JobPostRepository;
 import com.example.JFS_Job_Finding_Service.repository.NotificationRepository;
 import com.example.JFS_Job_Finding_Service.repository.PendingJobPostRepository;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
-import com.google.auto.value.AutoAnnotation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

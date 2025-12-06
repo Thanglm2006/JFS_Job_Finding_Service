@@ -1,9 +1,8 @@
-package com.example.JFS_Job_Finding_Service.DTO;
+package com.example.JFS_Job_Finding_Service.DTO.Auth;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.cloudinary.json.JSONObject;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

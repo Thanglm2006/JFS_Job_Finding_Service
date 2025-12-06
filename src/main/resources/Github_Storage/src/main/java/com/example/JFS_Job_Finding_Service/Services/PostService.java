@@ -1,6 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.example.JFS_Job_Finding_Service.DTO.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.Applicant;
 import com.example.JFS_Job_Finding_Service.models.ImageFolders;
 import com.example.JFS_Job_Finding_Service.models.JobPost;

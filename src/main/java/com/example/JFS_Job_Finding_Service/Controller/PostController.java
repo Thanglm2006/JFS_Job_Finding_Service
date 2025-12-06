@@ -1,5 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Controller;
-import com.example.JFS_Job_Finding_Service.DTO.PostingRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.PostingRequest;
 import com.example.JFS_Job_Finding_Service.Services.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,10 +11,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
-import java.util.TimeZone;
 
 
 @Controller

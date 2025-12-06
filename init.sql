@@ -12,7 +12,7 @@ CREATE TYPE employer_type AS ENUM (
 /* Create tables with constraints */
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    full_name TEXT NOT NULL,
+    full_name TEXT NOT NULL CHECK (full_name ~ '^[a-zA-Z ]+$'),
     email TEXT UNIQUE NOT NULL CHECK (
         email ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
     ),
@@ -20,18 +20,35 @@ CREATE TABLE users (
     phone TEXT UNIQUE CHECK (phone ~ '^[0-9]{10,15}$'),
     address TEXT,
     gender TEXT CHECK (gender IN ('male', 'female', 'other')) NOT NULL,
-    date_of_birth DATE,
+    date_of_birth DATE NOT NULL,
     role TEXT CHECK (role IN ('Employer', 'Applicant')) NOT NULL,
     avatar_url TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE
 );
 
+CREATE OR REPLACE FUNCTION check_minimum_age()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Check if date_of_birth is later than 15 years ago
+    IF NEW.date_of_birth > (CURRENT_DATE - INTERVAL '15 years') THEN
+        RAISE EXCEPTION 'Violation of constraint: User must be at least 15 years old.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER validate_user_age
+BEFORE INSERT OR UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION check_minimum_age();
+
 CREATE TABLE employer (
     id TEXT PRIMARY KEY,
     user_id INT REFERENCES users(id) ON DELETE CASCADE,
     type employer_type NOT NULL,
-    custom_type TEXT
+    custom_type TEXT,
+    org TEXT not null
 );
 
 CREATE TABLE admin (

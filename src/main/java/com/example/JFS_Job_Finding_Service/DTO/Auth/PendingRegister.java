@@ -1,4 +1,4 @@
-package com.example.JFS_Job_Finding_Service.DTO;
+package com.example.JFS_Job_Finding_Service.DTO.Auth;
 
 import com.example.JFS_Job_Finding_Service.models.Applicant;
 import com.example.JFS_Job_Finding_Service.models.Employer;

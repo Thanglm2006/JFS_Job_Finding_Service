@@ -1,6 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
-import com.example.JFS_Job_Finding_Service.DTO.ApplicantResponse;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.ApplicantResponse;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;

@@ -1,5 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Controller;
-import com.example.JFS_Job_Finding_Service.DTO.*;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
 import com.example.JFS_Job_Finding_Service.Services.AdminService;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
@@ -86,10 +86,9 @@ public class AuthController {
     }
     @PostMapping("/verifyEmail")
     @Operation(summary = "verify email", description = "send a verification code to the email")
-    public ResponseEntity<?> verifyEmail(@RequestBody Map<String, Object> body) {
-        String email = body.get("email").toString();
-        String code = body.get("code").toString();
-        return userService.verifyEmail(email, code);
+    public ResponseEntity<?> verifyEmail(@RequestBody VerifyEmailDTO verifyEmailDTO ) {
+
+        return userService.verifyEmail(verifyEmailDTO);
     }
     @PostMapping("/sendVerificationCode")
     @Operation(summary = "send verification code", description = "send a verification code to the email")

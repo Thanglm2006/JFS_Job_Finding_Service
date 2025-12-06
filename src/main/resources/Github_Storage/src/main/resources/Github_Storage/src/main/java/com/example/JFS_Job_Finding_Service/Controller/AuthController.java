@@ -1,8 +1,8 @@
 package com.example.JFS_Job_Finding_Service.Controller;
-import com.example.JFS_Job_Finding_Service.DTO.ApplicantRegisterRequest;
-import com.example.JFS_Job_Finding_Service.DTO.CheckPassRequest;
-import com.example.JFS_Job_Finding_Service.DTO.LoginRequest;
-import com.example.JFS_Job_Finding_Service.DTO.EmployerRegisterRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.ApplicantRegisterRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.CheckPassRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.LoginRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.EmployerRegisterRequest;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.*;

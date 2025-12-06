@@ -1,4 +1,4 @@
-package com.example.JFS_Job_Finding_Service.DTO;
+package com.example.JFS_Job_Finding_Service.DTO.Auth;
 import lombok.Getter;
 import lombok.Setter;
 
