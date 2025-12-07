@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
@@ -161,7 +162,10 @@ public class UserService {
             response.put("message", "Email này đã được sử dụng bởi một tài khoản khác!");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
-
+        if (name != null) {
+            name = name.trim();
+            name = Normalizer.normalize(name, Normalizer.Form.NFC);
+        }
         if (name == null || !name.matches("^[\\p{L} ]+$")) {
             response.put("error", "Invalid name format");
             response.put("message", "Tên chỉ được chứa chữ cái và khoảng trắng.");

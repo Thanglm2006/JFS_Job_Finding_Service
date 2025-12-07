@@ -12,7 +12,7 @@ CREATE TYPE employer_type AS ENUM (
 /* Create tables with constraints */
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    full_name TEXT NOT NULL CHECK (full_name ~ '^[\p{L} ]+$'),
+full_name TEXT NOT NULL CHECK (full_name ~ '^[[:alpha:] ]+$'),
     email TEXT UNIQUE NOT NULL CHECK (
         email ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
     ),
@@ -158,7 +158,6 @@ CREATE TABLE chat_messages (
     file_url TEXT,
     timestamp TIMESTAMP DEFAULT NOW()
 );
-
 /* Create sequences for ID generation */
 CREATE SEQUENCE employer_id_seq START 1;
 CREATE SEQUENCE applicant_id_seq START 1;
@@ -202,8 +201,7 @@ CREATE TRIGGER job_post_id_trigger
     FOR EACH ROW
     EXECUTE FUNCTION generate_job_post_id();
 
-/* Create PGroonga index */
 CREATE INDEX IF NOT EXISTS pgroonga_index ON job_post USING pgroonga ((title || ' ' || description));
 
-/* Disable sequential scans for PGroonga optimization */
+
 SET enable_seqscan = OFF;
