@@ -14,7 +14,7 @@ public class EmployerRegisterRequest {
     private Date dateOfBirth;
     private String gender;
     private String retypePass;
-
+    private String org;
     @Override
     public String toString() {
         return "EmployerRegisterRequest{" +

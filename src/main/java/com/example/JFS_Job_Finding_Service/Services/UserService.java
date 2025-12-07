@@ -1,7 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Services;
-import com.example.JFS_Job_Finding_Service.DTO.Auth.PendingRegister;
-import com.example.JFS_Job_Finding_Service.DTO.Auth.UpdateProfile;
-import com.example.JFS_Job_Finding_Service.DTO.Auth.VerifyEmailDTO;
+import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
 import com.example.JFS_Job_Finding_Service.models.Applicant;
 import com.example.JFS_Job_Finding_Service.models.Employer;
 import com.example.JFS_Job_Finding_Service.models.employer_type;
@@ -59,9 +57,16 @@ public class UserService {
     public User getUserById(long id){
         return userRepository.findById(id).orElse(null);
     }
-    public ResponseEntity<?> EmployerRegister(String email, String password, String confirmPass, String name, String employerType, Date dateOfBirth, String gender) {
+    public ResponseEntity<?> EmployerRegister(EmployerRegisterRequest employerRegisterRequest) {
         Map<String, Object> response = new HashMap<>();
-
+        String email = employerRegisterRequest.getEmail();
+        String password = employerRegisterRequest.getPassword();
+        String confirmPass=employerRegisterRequest.getRetypePass();
+        String name = employerRegisterRequest.getName();
+        String gender = employerRegisterRequest.getGender();
+        Date dateOfBirth = employerRegisterRequest.getDateOfBirth();
+        String org = employerRegisterRequest.getOrg();
+        String employerType = employerRegisterRequest.getEmployerType();
         if (!password.equals(confirmPass)) {
             response.put("error", "Password mismatch");
             response.put("message", "Mật khẩu không khớp!");
@@ -113,6 +118,12 @@ public class UserService {
 
         Employer employer = new Employer();
         employer.setUser(user);
+        if(org==null){
+            response.put("error", "Invalid org");
+            response.put("message", "Invalid org");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        employer.setOrg(org);
 
         try {
             employer.setType(employer_type.valueOf(employerType));
@@ -147,10 +158,15 @@ public class UserService {
         return ResponseEntity.ok(response);
     }
 
-    public ResponseEntity<?> ApplicantRegister(String email, String password, String confirmPass, String name, Date dateOfBirth, String gender) {
+    public ResponseEntity<?> ApplicantRegister(ApplicantRegisterRequest applicantRegisterRequest) {
         Map<String, Object> response = new HashMap<>();
-        System.out.println(password);
-        System.out.println(confirmPass);
+        String password=applicantRegisterRequest.getPassword();
+        String confirmPass=applicantRegisterRequest.getPassword();
+        String email=applicantRegisterRequest.getEmail();
+        String name=applicantRegisterRequest.getName();
+        String gender=applicantRegisterRequest.getGender();
+        Date dateOfBirth=applicantRegisterRequest.getDateOfBirth();
+
         if (!password.equals(confirmPass)) {
             response.put("error", "no matching password");
             response.put("message", "Mật khẩu không khớp!");

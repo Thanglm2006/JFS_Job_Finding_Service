@@ -31,10 +31,7 @@ public class AuthController {
     @PostMapping("/register/employer")
     @Operation(summary = "User Registration", description = "Register a new user with email, password, name, and role.")
     public ResponseEntity<?> EmployerRegister(@RequestBody EmployerRegisterRequest employerRegisterRequest) {
-        return userService.EmployerRegister(
-                employerRegisterRequest.getEmail(),
-                employerRegisterRequest.getPassword(), employerRegisterRequest.getRetypePass(),
-                employerRegisterRequest.getName(), employerRegisterRequest.getEmployerType(), employerRegisterRequest.getDateOfBirth(), employerRegisterRequest.getGender());
+        return userService.EmployerRegister(employerRegisterRequest);
     }
 
     @PostMapping("/register/applicant")
@@ -42,10 +39,7 @@ public class AuthController {
 
     public ResponseEntity<?> ApplicantRegister(@RequestBody ApplicantRegisterRequest applicantRegisterRequest) {
         System.out.println(applicantRegisterRequest.getEmail());
-        return userService.ApplicantRegister(
-                applicantRegisterRequest.getEmail(),
-                applicantRegisterRequest.getPassword(), applicantRegisterRequest.getRetypePass(),
-                applicantRegisterRequest.getName(), applicantRegisterRequest.getDateOfBirth(),applicantRegisterRequest.getGender());
+        return userService.ApplicantRegister(applicantRegisterRequest);
     }
 
     @PostMapping("/login/employer")

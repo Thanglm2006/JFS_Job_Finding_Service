@@ -24,6 +24,8 @@ public class Employer {
     private employer_type type;
     @Column
     private String customType;
+    @Column
+    private String org;
     public Employer(User user, employer_type type) {
         this.user = user;
         this.type = type;
