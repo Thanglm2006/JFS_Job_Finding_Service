@@ -120,7 +120,7 @@ public class UserService {
         employer.setUser(user);
         if(org==null){
             response.put("error", "Invalid org");
-            response.put("message", "Invalid org");
+            response.put("message", "okok");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         employer.setOrg(org);
@@ -466,7 +466,8 @@ public class UserService {
             response.put("status", "success");
             response.put("role", "Employer");
             response.put("employerId", employer.get().getId());
-            response.put("organization", employer.get().getType());
+            response.put("organization", employer.get().getOrg());
+            response.put("field",employer.get().getType());
 
             return ResponseEntity.ok(response);
         } else {
