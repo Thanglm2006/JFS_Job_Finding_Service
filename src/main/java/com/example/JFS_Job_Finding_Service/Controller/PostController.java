@@ -56,6 +56,21 @@ public class PostController {
         }
     }
 
+    @PostMapping("/deletePendingPosts")
+    @Operation(summary = "Delete pending posts", description = "only employer use")
+    public ResponseEntity<?> deletePendingPosts(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam long pendingId
+    ) {
+        try{
+            return pendingJobPostService.deletePendingPost(headers.getFirst("token"), pendingId);
+        } catch (Exception e){
+            return ResponseEntity.status(500).body("Error fetching pending posts: " + e.getMessage());
+        }
+    }
+
+
+
     @GetMapping("/getSomePosts")
     @Operation(summary = "select 10 posts per time")
     public ResponseEntity<?> getSomePosts(
@@ -119,6 +134,8 @@ public class PostController {
             return ResponseEntity.status(500).body("Error accepting post: " + e.getMessage());
         }
     }
+
+
     @PostMapping("/deletePost")
     @Operation(summary = "delete a post, only admin and employer can do this")
     public ResponseEntity<?> deletePost(
