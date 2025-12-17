@@ -83,11 +83,23 @@ public class JwtUtil {
         return applicant;
     }
     //check permission
+    public boolean checkPermission(String token, String[] role) {
+        String subject=extractSubject(token);
+        int idx=subject.indexOf("|");
+        String permission=subject.substring(idx+1);
+        for(String r: role){
+            if(r.equals(permission)){
+                return true;
+            }
+        }
+        return false;
+    }
     public boolean checkPermission(String token, String role) {
         String subject=extractSubject(token);
         int idx=subject.indexOf("|");
         String permission=subject.substring(idx+1);
-        return role.equals(permission);
+
+        return permission.equals(role);
     }
     //check whether is an employer
     public boolean checkWhetherIsEmployer(String token) {

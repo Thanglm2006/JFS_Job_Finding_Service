@@ -52,7 +52,7 @@ public class PostService {
         List<Map<String, Object>> posts = jobPostsPage.getContent().stream().map(jobPost -> {
             {
                 try {
-                    String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
+                    String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown";
                     List<ImageFolders> folder = List.of();
                     List<String> pics = new java.util.ArrayList<>(List.of());
                     if (jobPost.getWorkspacePicture() != null) {
@@ -121,7 +121,7 @@ public class PostService {
 
         List<Map<String, Object>> posts = jobPosts.stream().map(jobPost -> {
             try {
-                String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
+                String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown";
                 List<ImageFolders> folder = List.of();
                 List<String> pics = new ArrayList<>();
 
@@ -206,7 +206,7 @@ public class PostService {
             Map<String, Object> postData = new HashMap<>();
             postData.put("id", jobPost.getId());
             postData.put("title", jobPost.getTitle());
-            postData.put("employerName", employerOptional.getFullName());
+            postData.put("employerName", employerOptional.getOrgName());
             postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
             postData.put("isSaved", true);
             postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
@@ -278,7 +278,7 @@ public class PostService {
             applicationData.put("applicantId", applicant.getId());
             applicationData.put("workspacePicture", jobPost.getWorkspacePicture());
             applicationData.put("jobEmployerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
-            applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown");
+            applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown");
             applicationData.put("status", application.getStatus());
             applicationData.put("appliedAt", application.getAppliedAt());
             applicationData.put("applicantName", applicant.getUser().getFullName());

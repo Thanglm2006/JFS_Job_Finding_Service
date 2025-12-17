@@ -17,9 +17,9 @@ public interface JobPostRepository extends JpaRepository<JobPost, String> {
     Page<JobPost> findByEmployer(Employer employer, Pageable pageable);
     List<JobPost> findByEmployer(Employer employer);
     @Query(value = """
-        SELECT * FROM job_post
-        WHERE (title || ' ' || description) &@~ :pattern
-        LIMIT 10
-        """, nativeQuery = true)
+    SELECT * FROM job_post
+    WHERE ARRAY[title, description::text] &@~ :pattern
+    LIMIT 10
+    """, nativeQuery = true)
     List<JobPost> searchWithPGroonga(@Param("pattern") String pattern);
 }

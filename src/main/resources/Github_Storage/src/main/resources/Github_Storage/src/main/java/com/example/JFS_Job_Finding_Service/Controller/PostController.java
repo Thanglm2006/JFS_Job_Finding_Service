@@ -1,5 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Controller;
-import com.example.JFS_Job_Finding_Service.DTO.Auth.PostingRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
 import com.example.JFS_Job_Finding_Service.Services.PostService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;

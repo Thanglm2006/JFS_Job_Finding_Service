@@ -3,6 +3,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.Objects;
 
@@ -28,7 +29,7 @@ public class User {
     @Column(unique = true)
     private String phone;
     @Column (nullable = true)
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
     @Column(nullable = true)
     private String gender;
 

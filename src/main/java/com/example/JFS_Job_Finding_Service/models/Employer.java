@@ -22,7 +22,7 @@ public class Employer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne()
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private User user;
 
@@ -61,7 +61,7 @@ public class Employer {
     private String idCardFront;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", columnDefinition = "varchar(255) default 'PENDING'")
+    @Column(name = "status")
     private VerificationStatus status = VerificationStatus.PENDING;
 
     @Column(name = "rejection_reason")

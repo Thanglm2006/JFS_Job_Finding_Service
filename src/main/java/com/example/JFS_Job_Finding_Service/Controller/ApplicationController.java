@@ -1,10 +1,12 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
+import com.example.JFS_Job_Finding_Service.DTO.Application.ApplyDTO;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.ApplicantResponse;
 import com.example.JFS_Job_Finding_Service.DTO.SetScheduleRequest;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import com.example.JFS_Job_Finding_Service.Services.EmployeeService;
 import com.example.JFS_Job_Finding_Service.Services.ScheduleService;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -21,26 +23,38 @@ public class ApplicationController {
     private EmployeeService employeeService;
 
     @PostMapping("/apply")
+    @Operation(summary = "apply for a post, only applicant can do this")
     public ResponseEntity<?> applyForJob(
             @RequestHeader HttpHeaders headers,
-            @RequestParam("jobId") String jobId,
-            @RequestParam("position") String position
+            @RequestBody ApplyDTO dto
     ) {
-        return applicationService.applyForJob(headers.getFirst("token"), jobId, position);
+        return applicationService.applyForJob(headers.getFirst("token"), dto.getJobId(), dto.getPosition(), dto.getCv());
     }
     @PostMapping("/accept")
     public ResponseEntity<?> acceptApplication(
             @RequestHeader HttpHeaders headers,
             @RequestBody ApplicantResponse applicantResponse
     ) {
-        return applicationService.accept(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId());
+        return applicationService.accept(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId(), applicantResponse.getInterview());
     }
     @PostMapping("/reject")
     public ResponseEntity<?> rejectApplication(
             @RequestHeader HttpHeaders headers,
             @RequestBody ApplicantResponse applicantResponse
     ) {
-        return applicationService.reject(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId());
+        return applicationService.reject(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId(), applicantResponse.getReason());
+    }
+    @GetMapping("/unApply")
+    @Operation(summary = "unapply for a post, only applicant can do this")
+    public ResponseEntity<?> unApply(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam("jobId") String jobId
+    ) {
+        try {
+            return applicationService.unApplyForJob(headers.getFirst("token"), jobId);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error unapplying for post: " + e.getMessage());
+        }
     }
     @PostMapping("/getAllApplicationsForEmployer")
     public ResponseEntity<?> getAllApplicationsForEmployer(

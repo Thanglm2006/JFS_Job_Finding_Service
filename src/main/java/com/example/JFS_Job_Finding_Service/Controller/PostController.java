@@ -1,5 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Controller;
-import com.example.JFS_Job_Finding_Service.DTO.Auth.PostingRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
 import com.example.JFS_Job_Finding_Service.Services.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,33 +29,14 @@ public class PostController {
     @Autowired
     private ApplicationService applicationService;
 
-    @Operation(summary = "Add a new post", description = "to post, you need to specify the Header with token and the body with title, description, and workspace picture")
-    @PostMapping("/addPost")
+    @Operation(summary = "Add a new post", description = "Post with title, description (JSON string), and files.")
+    @PostMapping(value = "/addPost", consumes = "multipart/form-data")
     public ResponseEntity<?> addPost(
-            @RequestHeader HttpHeaders headers,
-            @RequestParam("title") String title,
-            @RequestParam("description") String descriptionJson,
-            @RequestParam(value = "files", required = false) MultipartFile[] workspacePictures
+            @RequestHeader("token") String token, // Extract token directly
+            @ModelAttribute PostingRequest postingRequest // Binds title, description, and files
     ) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> descriptionMap = mapper.readValue(descriptionJson, new TypeReference<>() {});
-
-            PostingRequest postingRequest = new PostingRequest();
-            postingRequest.setDescription(descriptionMap);
-            System.out.println(postingRequest.getDescription());
-            postingRequest.setTitle(title);
-
-            if (workspacePictures != null) {
-                String folderName = cloudinaryService.uploadFiles(workspacePictures, title + new Date().toString());
-                postingRequest.setWorkSpacePicture(folderName);
-            }
-            return pendingJobPostService.addPost(headers.getFirst("token"), postingRequest);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Upload failed: " + e.getMessage());
-        }
+        return pendingJobPostService.addPost(token, postingRequest);
     }
-
     @PostMapping("/deletePendingPosts")
     @Operation(summary = "Delete pending posts", description = "only employer use")
     public ResponseEntity<?> deletePendingPosts(
@@ -172,31 +153,8 @@ public class PostController {
             return ResponseEntity.status(500).body("Error unsaving post: " + e.getMessage());
         }
     }
-    @GetMapping("/apply")
-    @Operation(summary = "apply for a post, only applicant can do this")
-    public ResponseEntity<?> apply(
-            @RequestHeader HttpHeaders headers,
-            @RequestParam("jobId") String jobId,
-            @RequestParam("position") String position
-    ) {
-        try {
-            return applicationService.applyForJob(headers.getFirst("token"), jobId,position);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error applying for post: " + e.getMessage());
-        }
-    }
-    @GetMapping("/unApply")
-    @Operation(summary = "unapply for a post, only applicant can do this")
-    public ResponseEntity<?> unApply(
-            @RequestHeader HttpHeaders headers,
-            @RequestParam("jobId") String jobId
-    ) {
-        try {
-            return applicationService.unApplyForJob(headers.getFirst("token"), jobId);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error unapplying for post: " + e.getMessage());
-        }
-    }
+
+
     @GetMapping("/getSavedPosts")
     @Operation(summary = "get saved posts, only applicant can do this")
     public ResponseEntity<?> getSavedPosts(

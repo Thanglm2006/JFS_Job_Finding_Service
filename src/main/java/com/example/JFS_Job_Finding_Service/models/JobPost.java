@@ -29,21 +29,28 @@ public class JobPost {
     @JdbcTypeCode(SqlTypes.JSON)  // ✅ Use correct annotation for JSONB in Hibernate 6
     @Column(columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> description;
+    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private String[] positions;
+
     @Column(nullable = true, name="workspace_picture")
     private String workspacePicture;
 
     @Column(nullable = false)
     private Instant createdAt=Instant.now();
-    public JobPost(String title, Employer employer, Map<String, Object> description) {
+    public JobPost(String title, Employer employer, Map<String, Object> description, String[] positions) {
         this.title = title;
         this.employer = employer;
         this.description = description;
+        this.positions = positions;
     }
 
-    public JobPost(String title, Employer employer, Map<String, Object> description, String workspacePicture) {
+    public JobPost(String title, Employer employer, Map<String, Object> description, String workspacePicture, String[] positions) {
         this.title = title;
         this.employer = employer;
         this.description = description;
         this.workspacePicture = workspacePicture;
+        this.positions = positions;
+
     }
 }

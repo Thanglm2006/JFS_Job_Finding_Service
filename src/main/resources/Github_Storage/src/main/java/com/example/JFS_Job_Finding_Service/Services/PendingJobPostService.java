@@ -1,6 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.example.JFS_Job_Finding_Service.DTO.Auth.PostingRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.JobPost;
 import com.example.JFS_Job_Finding_Service.models.Notification;
 import com.example.JFS_Job_Finding_Service.models.PendingJobPost;

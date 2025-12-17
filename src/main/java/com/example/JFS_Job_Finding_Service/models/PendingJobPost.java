@@ -31,7 +31,9 @@ public class PendingJobPost {
     private Map<String, Object> description;
     @Column(nullable = true, name="workspace_picture")
     private String workspacePicture;
-
+    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private String[] positions;
     @Column(nullable = false)
     private Instant createdAt=Instant.now();
     public PendingJobPost(String title, Employer employer, Map<String, Object> description) {

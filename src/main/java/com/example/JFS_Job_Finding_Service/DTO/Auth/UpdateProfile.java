@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class UpdateProfile {
     private String profilePictureUrl;
     private String employerType;
     private String gender;
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
     private Map<String,Object> resume;
     private Instant updatedAt = Instant.now();
     private LocalDateTime lastLoginTime;

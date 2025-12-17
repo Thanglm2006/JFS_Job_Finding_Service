@@ -9,7 +9,7 @@ CREATE TYPE employer_type AS ENUM (
     'Salon', 'Gym', 'Farm', 'Entertainment', 'E-commerce', 'Individual', 'Other'
 );
 CREATE TYPE verification_status AS ENUM ('PENDING', 'VERIFIED', 'REJECTED', 'BANNED');
-
+create type application_status as ENUM ('PENDING', 'REVIEWED', 'ACCEPTED', 'REJECTED');
 /* Create tables with constraints */
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -32,8 +32,8 @@ CREATE OR REPLACE FUNCTION check_minimum_age()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Check if date_of_birth is later than 15 years ago
-    IF NEW.date_of_birth > (CURRENT_DATE - INTERVAL '15 years') THEN
-        RAISE EXCEPTION 'Violation of constraint: User must be at least 15 years old.';
+    IF age(NEW.date_of_birth) < interval '15 years' THEN
+        RAISE EXCEPTION 'User must be at least 15 years old.';
     END IF;
     RETURN NEW;
 END;
@@ -90,6 +90,7 @@ CREATE TABLE applicant (
 CREATE TABLE job_post (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
+    positions text array not null,
     employer_id TEXT REFERENCES employer(id) ON DELETE CASCADE,
     description JSONB NOT NULL CHECK (description ? 'location'),
     workspace_picture TEXT,
@@ -99,6 +100,7 @@ CREATE TABLE job_post (
 CREATE TABLE pending_job_post (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
+    positions text array not null,
     employer_id TEXT REFERENCES employer(id) ON DELETE CASCADE,
     description JSONB NOT NULL CHECK (description ? 'location'),
     workspace_picture TEXT,
@@ -159,11 +161,13 @@ CREATE TABLE applications (
     id SERIAL PRIMARY KEY,
     job_id TEXT NOT NULL REFERENCES job_post(id) ON DELETE CASCADE,
     applicant_id TEXT NOT NULL REFERENCES applicant(id) ON DELETE CASCADE,
-    status TEXT CHECK (status IN ('Pending', 'Reviewed', 'Accepted', 'Rejected')) DEFAULT 'Pending',
+    status application_status not null DEFAULT 'PENDING',
+    cv text not null,
+    interview_date timestamp,
+    reason text,
     position TEXT NOT NULL,
     applied_at TIMESTAMP DEFAULT NOW()
 );
-
 CREATE TABLE saved_jobs (
     id SERIAL PRIMARY KEY,
     applicant_id TEXT NOT NULL REFERENCES applicant(id) ON DELETE CASCADE,
@@ -185,23 +189,24 @@ CREATE SEQUENCE applicant_id_seq START 1;
 CREATE SEQUENCE job_post_id_seq START 1;
 
 /* Create trigger functions */
-CREATE FUNCTION generate_employer_id() RETURNS TRIGGER AS $$
+/* FIX ID GENERATORS TO PREVENT TRUNCATION */
+CREATE OR REPLACE FUNCTION generate_employer_id() RETURNS TRIGGER AS $$
 BEGIN
-    NEW.id := 'EMP-' || LPAD(nextval('employer_id_seq')::TEXT, 4, '0');
+    NEW.id := 'EMP-' || LPAD(nextval('employer_id_seq')::TEXT, 6, '0');
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION generate_applicant_id() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION generate_applicant_id() RETURNS TRIGGER AS $$
 BEGIN
-    NEW.id := 'APP-' || LPAD(nextval('applicant_id_seq')::TEXT, 4, '0');
+    NEW.id := 'APP-' || LPAD(nextval('applicant_id_seq')::TEXT, 6, '0');
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION generate_job_post_id() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION generate_job_post_id() RETURNS TRIGGER AS $$
 BEGIN
-    NEW.id := 'JOB-' || LPAD(nextval('job_post_id_seq')::TEXT, 4, '0');
+    NEW.id := 'JOB-' || LPAD(nextval('job_post_id_seq')::TEXT, 6, '0');
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -222,7 +227,6 @@ CREATE TRIGGER job_post_id_trigger
     FOR EACH ROW
     EXECUTE FUNCTION generate_job_post_id();
 
-CREATE INDEX IF NOT EXISTS pgroonga_index ON job_post USING pgroonga ((title || ' ' || description));
-
-
+CREATE INDEX IF NOT EXISTS pgroonga_job_post_title ON job_post USING pgroonga (title);
+CREATE INDEX IF NOT EXISTS pgroonga_job_post_description ON job_post USING pgroonga (description);
 SET enable_seqscan = OFF;

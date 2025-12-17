@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.DTO.Schedule;
+import com.example.JFS_Job_Finding_Service.models.Enum.ApplicationStatus;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.checkerframework.checker.units.qual.A;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -39,7 +41,7 @@ public class ApplicationService {
     @Autowired
     private TokenService tokenService;
 
-    public ResponseEntity<?> applyForJob(String token, String jobId, String position) {
+    public ResponseEntity<?> applyForJob(String token, String jobId, String position, String cv) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
@@ -53,7 +55,7 @@ public class ApplicationService {
         Applicant applicant = jwtUtil.getApplicant(token);
         JobPost job= jobPostRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
-        Application application = new Application(job, applicant,finalPosition);
+        Application application = new Application(job, applicant,finalPosition,cv);
         application.setAppliedAt(Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
@@ -85,7 +87,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application withdrawn successfully for job ID: " + jobId);
     }
-    public ResponseEntity<?> accept(String token, String jobId, String applicantId) {
+    public ResponseEntity<?> accept(String token, String jobId, String applicantId, LocalDateTime interview) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
@@ -102,10 +104,10 @@ public class ApplicationService {
         if (!job.getEmployer().getUser().getEmail().equals(jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(403).body("You do not own this job post");
         }
-        if (application.getStatus().equals("Accepted")) {
+        if (application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
             return ResponseEntity.status(400).body("Application already accepted");
         }
-        application.setStatus("Accepted");
+        application.setStatus(ApplicationStatus.ACCEPTED);
         application.setAppliedAt(Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
@@ -116,7 +118,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Application accepted successfully for job ID: " + job.getId());
     }
-    public ResponseEntity<?> reject(String token, String jobId, String applicantId) {
+    public ResponseEntity<?> reject(String token, String jobId, String applicantId, String reason) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Unauthorized access");
         }
@@ -133,10 +135,11 @@ public class ApplicationService {
         if (!job.getEmployer().getUser().getEmail().equals(jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(403).body("You do not own this job post");
         }
-        if (application.getStatus().equals("Rejected")) {
+        if (application.getStatus().equals(ApplicationStatus.REJECTED) ){
             return ResponseEntity.status(400).body("Application already rejected");
         }
-        application.setStatus("Rejected");
+        application.setStatus(ApplicationStatus.REJECTED);
+        application.setReason(reason);
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
@@ -169,11 +172,11 @@ public class ApplicationService {
             List<Application> applicationsL = applicationRepository.findByJob(jobPost);
             List<Map<String, Object>> applicationDataList = new ArrayList<>();
             for(Application application : applicationsL) {
-                if (application == null||application.getStatus().equalsIgnoreCase("Rejected")|| application.getStatus().equalsIgnoreCase("Accepted")) {
+                if (application == null||application.getStatus().equals(ApplicationStatus.REJECTED)|| application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
                     continue;
                 }
                 Applicant applicant = application.getApplicant();
-                String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown";
+                String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown";
                 List<ImageFolders> folder = List.of();
                 List<String> pics = new ArrayList<>(List.of());
                 if (jobPost.getWorkspacePicture() != null) {
@@ -238,7 +241,7 @@ public class ApplicationService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "appliedAt"));
         Page<Application> applicationPage = applicationRepository.findByApplicant(applicant, pageable);
         List<Map<String, Object>> applications = applicationPage.getContent().stream().map(application -> {
-            if(!application.getStatus().equalsIgnoreCase("Accepted")) {
+            if(!application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
                 return null;
             }
             JobPost jobPost = application.getJob();
@@ -248,7 +251,7 @@ public class ApplicationService {
             applicationData.put("jobTitle", jobPost.getTitle());
             applicationData.put("jobDescription", jobPost.getDescription());
             applicationData.put("jobEmployerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
-            applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getFullName() : "Unknown");
+            applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown");
             applicationData.put("employerAvatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
             applicationData.put("job",application.getPosition());
             applicationData.put("acceptedAt", application.getAppliedAt());

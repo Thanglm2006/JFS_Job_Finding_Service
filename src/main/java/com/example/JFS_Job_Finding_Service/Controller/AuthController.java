@@ -1,5 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
+import com.example.JFS_Job_Finding_Service.DTO.EmployerUpdateDTO;
 import com.example.JFS_Job_Finding_Service.Services.AdminService;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import com.example.JFS_Job_Finding_Service.Services.RedisTokenService;
@@ -171,5 +172,12 @@ public class AuthController {
             return redisTokenService.blacklistToken(headers.getFirst("token"));
         }
         else return ResponseEntity.ok().build();
+    }
+    @PostMapping(value = "/update-employer-profile")
+    public ResponseEntity<?> updateEmployerProfile(
+            @ModelAttribute EmployerUpdateDTO dto,
+            @RequestHeader("token") String token
+    ) {
+        return userService.updateEmployerProfileWithS3(token, dto);
     }
 }

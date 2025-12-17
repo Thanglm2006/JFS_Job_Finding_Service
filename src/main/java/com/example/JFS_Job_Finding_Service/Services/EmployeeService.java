@@ -1,6 +1,7 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.models.*;
+import com.example.JFS_Job_Finding_Service.models.Enum.ApplicationStatus;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.checkerframework.checker.units.qual.A;
@@ -90,7 +91,7 @@ public class EmployeeService {
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
         Application application= applicationRepository.findByJobAndApplicant(jobPost, applicant)
                 .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
-        if (application == null || !application.getStatus().equalsIgnoreCase("Accepted")) {
+        if (application == null || !application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
             return ResponseEntity.status(404).body("Application not found or not accepted for this job post");
 
         }
