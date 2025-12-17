@@ -46,7 +46,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - ./redis-data:/data
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -62,8 +62,8 @@ services:
       - "9001:9001"
     volumes:
       - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
+      - mosquitto/data:/mosquitto/data
+      - mosquitto/log:/mosquitto/log
     networks:
       - app-network
 
@@ -89,6 +89,9 @@ services:
 
 volumes:
   postgres-data-dev:
+  redis-data:
+  mosquitto-data:
+  mosquitto-log:
 
 networks:
   app-network:
