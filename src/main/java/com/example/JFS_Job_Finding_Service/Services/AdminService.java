@@ -20,7 +20,7 @@ import java.util.Map;
 @Service
 public class AdminService {
     @Autowired
-    AdminRepository repository;
+    AdminRepository adminRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
@@ -36,7 +36,7 @@ public class AdminService {
         if (!this.secretPass.equals(secretPass)) {
             return ResponseEntity.status(403).body(null);
         }
-        if (repository.findByEmail(email) != null) {
+        if (adminRepository.findByEmail(email) != null) {
             return ResponseEntity.status(400).body(null);
         }
         String encodedPass= passwordEncoder.encode(password);
@@ -44,12 +44,12 @@ public class AdminService {
         admin.setFullName(fullName);
         admin.setEmail(email);
         admin.setPassword(encodedPass);
-        repository.save(admin);
+        adminRepository.save(admin);
         return ResponseEntity.ok(admin);
 
     }
     public ResponseEntity<?> login(String email, String password) {
-        Admin admin = repository.findByEmail(email);
+        Admin admin = adminRepository.findByEmail(email);
         if (admin == null) {
             Map<String, String> error = Map.of("message", "Admin not found");
             return ResponseEntity.status(404).body(error);
