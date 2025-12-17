@@ -1,6 +1,6 @@
-package com.example.JFS_Job_Finding_Service.models;
+package com.example.JFS_Job_Finding_Service.models.Enum;
 
-public enum employer_type {
+public enum EmployerType {
     Company , Shop, Restaurant, Supermarket, Hotel,
     School, Hospital, Recruiter, Government, NGO,
     Startup, EventOrganizer, Construction, Transportation,

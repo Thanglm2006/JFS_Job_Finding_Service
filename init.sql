@@ -8,6 +8,7 @@ CREATE TYPE employer_type AS ENUM (
     'Startup', 'Event Organizer', 'Construction', 'Transportation',
     'Salon', 'Gym', 'Farm', 'Entertainment', 'E-commerce', 'Individual', 'Other'
 );
+CREATE TYPE verification_status AS ENUM ('PENDING', 'VERIFIED', 'REJECTED', 'BANNED');
 
 /* Create tables with constraints */
 CREATE TABLE users (
@@ -46,9 +47,29 @@ EXECUTE FUNCTION check_minimum_age();
 CREATE TABLE employer (
     id TEXT PRIMARY KEY,
     user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    -- Thông tin cơ bản
+    org_name TEXT NOT NULL,
     type employer_type NOT NULL,
     custom_type TEXT,
-    org TEXT not null
+
+    -- THÔNG TIN PHÁP LÝ
+    tax_code TEXT UNIQUE,
+    business_license_url TEXT,
+    business_code text,
+    company_website TEXT,
+    company_email TEXT,
+    headquarters_address TEXT,
+    id_card_number text,
+    id_card_front text,
+
+
+    -- TRẠNG THÁI KIỂM DUYỆT
+    status verification_status DEFAULT 'PENDING',
+    rejection_reason TEXT,
+    verified_at TIMESTAMP,
+
+    -- Metadata
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE admin (

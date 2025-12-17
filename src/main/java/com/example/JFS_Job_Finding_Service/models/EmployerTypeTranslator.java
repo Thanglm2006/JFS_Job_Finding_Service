@@ -1,33 +1,35 @@
 package com.example.JFS_Job_Finding_Service.models;
 
+import com.example.JFS_Job_Finding_Service.models.Enum.EmployerType;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class EmployerTypeTranslator {
-    private Map<employer_type,String> Translator;
+    private Map<EmployerType,String> Translator;
 
     public EmployerTypeTranslator() {
         Translator=new HashMap<>();
-        Translator.put(employer_type.Entertainment,"Giải trí");
-        Translator.put(employer_type.Company, "Công ty");
-        Translator.put(employer_type.Shop, "Cửa hàng");
-        Translator.put(employer_type.Restaurant, "Nhà hàng");
-        Translator.put(employer_type.Supermarket, "Siêu thị");
-        Translator.put(employer_type.Hotel, "Khách sạn / Nhà nghỉ");
-        Translator.put(employer_type.School, "Trường học");
-        Translator.put(employer_type.Hospital, "Bệnh viện");
-        Translator.put(employer_type.Recruiter, "Nhà tuyển dụng");
-        Translator.put(employer_type.Government, "Chính phủ");
-        Translator.put(employer_type.NGO, "Tổ chức phi chính phủ");
-        Translator.put(employer_type.Startup, "Khởi nghiệp");
-        Translator.put(employer_type.EventOrganizer, "Nhà tổ chức sự kiện");
-        Translator.put(employer_type.Construction, "Xây dựng");
-        Translator.put(employer_type.Transportation, "Vận tải");
-        Translator.put(employer_type.Salon, "Salon làm đẹp");
-        Translator.put(employer_type.Gym, "Phòng gym");
-        Translator.put(employer_type.Farm, "Nông trại");
-        Translator.put(employer_type.E_commerce, "Thương mại điện tử");
-        Translator.put(employer_type.individual, "Cá nhân");
-        Translator.put(employer_type.Other, "Khác");
+        Translator.put(EmployerType.Entertainment,"Giải trí");
+        Translator.put(EmployerType.Company, "Công ty");
+        Translator.put(EmployerType.Shop, "Cửa hàng");
+        Translator.put(EmployerType.Restaurant, "Nhà hàng");
+        Translator.put(EmployerType.Supermarket, "Siêu thị");
+        Translator.put(EmployerType.Hotel, "Khách sạn / Nhà nghỉ");
+        Translator.put(EmployerType.School, "Trường học");
+        Translator.put(EmployerType.Hospital, "Bệnh viện");
+        Translator.put(EmployerType.Recruiter, "Nhà tuyển dụng");
+        Translator.put(EmployerType.Government, "Chính phủ");
+        Translator.put(EmployerType.NGO, "Tổ chức phi chính phủ");
+        Translator.put(EmployerType.Startup, "Khởi nghiệp");
+        Translator.put(EmployerType.EventOrganizer, "Nhà tổ chức sự kiện");
+        Translator.put(EmployerType.Construction, "Xây dựng");
+        Translator.put(EmployerType.Transportation, "Vận tải");
+        Translator.put(EmployerType.Salon, "Salon làm đẹp");
+        Translator.put(EmployerType.Gym, "Phòng gym");
+        Translator.put(EmployerType.Farm, "Nông trại");
+        Translator.put(EmployerType.E_commerce, "Thương mại điện tử");
+        Translator.put(EmployerType.individual, "Cá nhân");
+        Translator.put(EmployerType.Other, "Khác");
     }
 }
