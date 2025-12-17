@@ -41,7 +41,7 @@ services:
       - "host.docker.internal:host-gateway"
   redis:
     image: redis:alpine
-    container_name: jfs-redis-blacklist
+    container_name: jfs-redis
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
