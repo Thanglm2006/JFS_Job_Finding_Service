@@ -54,48 +54,48 @@ public class PendingJobPostService {
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
         //Check scam, spam post
-//        try {
-//            String rawDesc = postingRequest.getDescription().toString();
-//
-//            String processedDesc = Arrays.stream(rawDesc.replace("{", "").replace("}", "").split(", "))
-//                    .map(part -> {
-//                        int idx = part.indexOf("=");
-//                        return (idx != -1) ? part.substring(idx + 1).trim() : part.trim();
-//                    })
-//                    .collect(Collectors.joining(". "));
-//            String textToCheck = postingRequest.getTitle() + " . " + processedDesc;
-//            String apiUrl = "http://host.docker.internal:8000/predict";
-//
-//            Map<String, String> requestBody = new HashMap<>();
-//            requestBody.put("text", textToCheck);
-//
-//            RestTemplate restTemplate = new RestTemplate();
-//            ResponseEntity<Map> apiResponse = restTemplate.postForEntity(apiUrl, requestBody, Map.class);
-//
-//            if (apiResponse.getBody() != null) {
-//                Map<String, Object> body = apiResponse.getBody();
-//
-//                if (body.containsKey("scores")) {
-//                    Map<String, Double> scores = (Map<String, Double>) body.get("scores");
-//                    Double scamScore = scores.get("scam");
-//
-//
-//                    if (scamScore > 0.7) {
-//                        System.out.println("❌ Blocked Scam Post: " + scamScore);
-//
-//                        response.put("status", "fail");
-//                        response.put("message", "Bài đăng của bạn bị hệ thống chặn do nghi ngờ nội dung không an toàn/lừa đảo.");
-//                        response.put("scam_score", scamScore);
-//
-//                        return new ResponseEntity<>(response, HttpStatus.NOT_ACCEPTABLE);
-//                    }
-//                }
-//            }
-//            System.out.println(apiResponse.getBody());
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            System.out.println("⚠️ Warning: Could not connect to Scam API. Proceeding with manual review.");
-//        }
+        try {
+            String rawDesc = postingRequest.getDescription().toString();
+
+            String processedDesc = Arrays.stream(rawDesc.replace("{", "").replace("}", "").split(", "))
+                    .map(part -> {
+                        int idx = part.indexOf("=");
+                        return (idx != -1) ? part.substring(idx + 1).trim() : part.trim();
+                    })
+                    .collect(Collectors.joining(". "));
+            String textToCheck = postingRequest.getTitle() + " . " + processedDesc;
+            String apiUrl = "http://host.docker.internal:8000/predict";
+
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("text", textToCheck);
+
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<Map> apiResponse = restTemplate.postForEntity(apiUrl, requestBody, Map.class);
+
+            if (apiResponse.getBody() != null) {
+                Map<String, Object> body = apiResponse.getBody();
+
+                if (body.containsKey("scores")) {
+                    Map<String, Double> scores = (Map<String, Double>) body.get("scores");
+                    Double scamScore = scores.get("scam");
+
+
+                    if (scamScore > 0.7) {
+                        System.out.println("❌ Blocked Scam Post: " + scamScore);
+
+                        response.put("status", "fail");
+                        response.put("message", "Bài đăng của bạn bị hệ thống chặn do nghi ngờ nội dung không an toàn/lừa đảo.");
+                        response.put("scam_score", scamScore);
+
+                        return new ResponseEntity<>(response, HttpStatus.NOT_ACCEPTABLE);
+                    }
+                }
+            }
+            System.out.println(apiResponse.getBody());
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("⚠️ Warning: Could not connect to Scam API. Proceeding with manual review.");
+        }
 
         PendingJobPost jobPost = new PendingJobPost();
         jobPost.setTitle(postingRequest.getTitle());
