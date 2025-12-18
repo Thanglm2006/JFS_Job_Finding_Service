@@ -428,7 +428,7 @@ public class UserService {
         response.put("avatar", user.getAvatarUrl());
         response.put("createdAt", user.getCreatedAt());
         response.put("email", user.getEmail());
-        response.put("name", user.getFullName());
+        response.put("fullName", user.getFullName());
         response.put("role", user.getRole());
 
         if ("Applicant".equals(user.getRole())) {
