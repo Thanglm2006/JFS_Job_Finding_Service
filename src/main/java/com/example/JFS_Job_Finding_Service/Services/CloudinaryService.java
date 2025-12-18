@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -38,5 +39,21 @@ public class CloudinaryService {
     public String uploadFile(MultipartFile file) throws IOException {
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap("folder", "messageIMGs"));
         return uploadResult.get("secure_url").toString();
+    }
+    public Map<String, Object> generateClientSignature() {
+        long timestamp = System.currentTimeMillis() / 1000;
+        Map<String, Object> params = new HashMap<>();
+        params.put("timestamp", timestamp);
+        params.put("folder", "messageIMGs");
+
+        String signature = cloudinary.apiSignRequest(params, cloudinary.config.apiSecret);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("signature", signature);
+        response.put("timestamp", timestamp);
+        response.put("api_key", cloudinary.config.apiKey);
+        response.put("folder", "messageIMGs");
+        response.put("cloud_name", cloudinary.config.cloudName);
+        return response;
     }
 }

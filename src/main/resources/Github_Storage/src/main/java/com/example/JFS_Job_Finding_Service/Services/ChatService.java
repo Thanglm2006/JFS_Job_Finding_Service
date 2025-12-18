@@ -1,7 +1,7 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.example.JFS_Job_Finding_Service.DTO.message;
-import com.example.JFS_Job_Finding_Service.DTO.userInChat;
+import com.example.JFS_Job_Finding_Service.DTO.Chat.message;
+import com.example.JFS_Job_Finding_Service.DTO.Chat.userInChat;
 import com.example.JFS_Job_Finding_Service.models.ChatMessage;
 import com.example.JFS_Job_Finding_Service.models.User;
 import com.example.JFS_Job_Finding_Service.repository.ChatMessageRepository;

@@ -3,6 +3,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "chat_messages")
@@ -25,7 +26,7 @@ public class ChatMessage {
     private String message;
 
     @Column(nullable = false, updatable = false)
-    private Instant timestamp;
+    private LocalDateTime timestamp;
     @Column(name="file_url", nullable=true)
     private String fileUrl;
 
@@ -43,7 +44,7 @@ public class ChatMessage {
 
     @PrePersist
     protected void onCreate() {
-        this.timestamp = Instant.now();
+        this.timestamp = LocalDateTime.now();
     }
 
 }

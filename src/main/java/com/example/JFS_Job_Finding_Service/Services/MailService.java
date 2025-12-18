@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.Services;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
@@ -103,6 +104,7 @@ public class MailService {
         }
         return CompletableFuture.completedFuture(null);
     }
+    @Async
     public void sendVerificationEmailHTML(String to, String code) throws MessagingException, MailException {
 
         String subject = "🔐 JFS: Mã xác nhận để xác minh email";

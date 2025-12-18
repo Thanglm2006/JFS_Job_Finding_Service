@@ -1,9 +1,8 @@
-package com.example.JFS_Job_Finding_Service.DTO;
+package com.example.JFS_Job_Finding_Service.DTO.Chat;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Setter
