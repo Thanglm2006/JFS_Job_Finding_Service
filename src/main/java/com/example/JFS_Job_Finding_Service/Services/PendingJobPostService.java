@@ -117,7 +117,7 @@ public class PendingJobPostService {
                 }
             }
         } catch (Exception e) {
-            System.out.println("⚠️ Cảnh báo: API kiểm tra lừa đảo không phản hồi. Đang tiếp tục xử lý.");
+            System.out.println("⚠️ Cảnh báo: bot kiểm tra lừa đảo không phản hồi. Đang tiếp tục xử lý.");
         }
 
         PendingJobPost jobPost = new PendingJobPost();

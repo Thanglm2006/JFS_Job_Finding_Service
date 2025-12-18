@@ -97,17 +97,16 @@ public class ScheduleService {
                 scheduleModel.setEndTime(schedule.getEndTime());
                 scheduleModel.setDay(schedule.getDay());
                 scheduleModel.setDescription(schedule.getDescription());
-                Notification notification = new Notification();
-                notification.setUser(applicant.getUser());
-                notification.setMessage("Lịch trình làm việc cho công việc " + job.getTitle() + " đã được cập nhật bởi " + job.getEmployer().getUser().getFullName());
-                notification.setRead(false);
-                notification.setCreatedAt(Instant.now());
-                scheduleRepository.save(scheduleModel);
-                notificationRepository.save(notification);
             } catch (Exception e) {
                 return ResponseEntity.badRequest().body("Không thể lưu lịch trình, dữ liệu không hợp lệ.");
             }
         }
+        Notification notification = new Notification();
+        notification.setUser(applicant.getUser());
+        notification.setMessage("Lịch làm việc cho công việc " + job.getTitle() + " đã được cập nhật bởi " + job.getEmployer().getOrgName());
+        notification.setRead(false);
+        notification.setCreatedAt(Instant.now());
+        notificationRepository.save(notification);
         return ResponseEntity.status(200).body("Đã lưu lịch trình làm việc thành công.");
     }
     public ResponseEntity<?> getSchedulesForApplicant(String token){

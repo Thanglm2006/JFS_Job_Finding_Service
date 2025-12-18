@@ -1,8 +1,10 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.models.Admin;
+import com.example.JFS_Job_Finding_Service.models.Notification; // Import
 import com.example.JFS_Job_Finding_Service.models.User;
 import com.example.JFS_Job_Finding_Service.repository.AdminRepository;
+import com.example.JFS_Job_Finding_Service.repository.NotificationRepository; // Import
 import com.example.JFS_Job_Finding_Service.repository.UserRepository;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant; // Import
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +28,8 @@ public class AdminService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private NotificationRepository notificationRepository; // Đã thêm
     @Autowired
     private JwtUtil jwtUtil;
     @Value("${secretPass}")
@@ -112,6 +117,14 @@ public class AdminService {
         }
         user.setActive(false);
         userRepository.save(user);
+
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setMessage("Tài khoản của bạn đã bị khóa bởi quản trị viên.");
+        notification.setRead(false);
+        notification.setCreatedAt(Instant.now());
+        notificationRepository.save(notification);
+
         response.put("status", "success");
         response.put("message", "Đã cấm người dùng thành công.");
         return ResponseEntity.ok(response);
@@ -137,6 +150,14 @@ public class AdminService {
         }
         user.setActive(true);
         userRepository.save(user);
+
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setMessage("Tài khoản của bạn đã được mở khóa bởi quản trị viên.");
+        notification.setRead(false);
+        notification.setCreatedAt(Instant.now());
+        notificationRepository.save(notification);
+
         response.put("status", "success");
         response.put("message", "Đã mở khóa người dùng thành công.");
         return ResponseEntity.ok(response);

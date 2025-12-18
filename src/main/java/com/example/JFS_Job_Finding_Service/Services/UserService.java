@@ -2,14 +2,12 @@ package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
 import com.example.JFS_Job_Finding_Service.DTO.EmployerUpdateDTO;
-import com.example.JFS_Job_Finding_Service.models.Applicant;
-import com.example.JFS_Job_Finding_Service.models.Employer;
+import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.models.Enum.EmployerType;
 import com.example.JFS_Job_Finding_Service.models.Enum.VerificationStatus;
-import com.example.JFS_Job_Finding_Service.models.PendingRegistration;
-import com.example.JFS_Job_Finding_Service.models.User;
 import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
 import com.example.JFS_Job_Finding_Service.repository.EmployerRepository;
+import com.example.JFS_Job_Finding_Service.repository.NotificationRepository;
 import com.example.JFS_Job_Finding_Service.repository.UserRepository;
 import com.example.JFS_Job_Finding_Service.security.PasswordConfig;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
@@ -26,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.text.Normalizer;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -50,6 +49,7 @@ public class UserService {
     private final Map<String, VerificationInfo> passwordResetMap = new ConcurrentHashMap<>();
 
     private static final int EXPIRATION_MINUTES = 5;
+    private final NotificationRepository notificationRepository;
 
     private String generateVerificationCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -187,6 +187,14 @@ public class UserService {
         }
         employer.setStatus(VerificationStatus.VERIFIED);
         employerRepository.save(employer);
+
+        Notification notification = new Notification();
+        notification.setUser(employer.getUser());
+        notification.setMessage("Chúc mừng! Tài khoản nhà tuyển dụng của bạn đã được phê duyệt. Bạn có thể đăng tin tuyển dụng ngay bây giờ.");
+        notification.setRead(false);
+        notification.setCreatedAt(Instant.now());
+        notificationRepository.save(notification);
+
         return ResponseEntity.ok(Map.of("message", "Đã phê duyệt tài khoản nhà tuyển dụng thành công."));
     }
 
@@ -205,6 +213,14 @@ public class UserService {
         employer.setStatus(VerificationStatus.REJECTED);
         employer.setRejectionReason(dto.getReason());
         employerRepository.save(employer);
+
+        Notification notification = new Notification();
+        notification.setUser(employer.getUser());
+        notification.setMessage("Rất tiếc, yêu cầu đăng ký của bạn đã bị từ chối. Lý do: " + dto.getReason());
+        notification.setRead(false);
+        notification.setCreatedAt(Instant.now());
+        notificationRepository.save(notification);
+
         return ResponseEntity.ok(Map.of("message", "Đã từ chối yêu cầu đăng ký của nhà tuyển dụng."));
     }
 
@@ -309,7 +325,7 @@ public class UserService {
         String normalizedGender = (gender != null) ? gender.toLowerCase() : "";
         if (!List.of("male", "female", "other").contains(normalizedGender)) {
             response.put("error", "Invalid gender");
-            response.put("message", "Giới tính không hợp lệ. Vui lòng chọn male, female hoặc other.");
+            response.put("message", "Giới tính không hợp lệ. Vui lòng chọn giới tính!");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
