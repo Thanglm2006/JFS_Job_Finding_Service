@@ -51,12 +51,12 @@ public class AdminService {
     public ResponseEntity<?> login(String email, String password) {
         Admin admin = adminRepository.findByEmail(email);
         if (admin == null) {
-            Map<String, String> error = Map.of("message", "Admin not found");
+            Map<String, String> error = Map.of("message", "Không tìm thấy quản trị viên với email này.");
             return ResponseEntity.status(404).body(error);
         }
 
         if (!passwordEncoder.matches(password, admin.getPassword())) {
-            Map<String, String> error = Map.of("message", "Invalid password");
+            Map<String, String> error = Map.of("message", "Mật khẩu không chính xác. Vui lòng thử lại.");
             return ResponseEntity.status(401).body(error);
         }
 
@@ -72,7 +72,7 @@ public class AdminService {
         Map<String, Object> response = new HashMap<>();
         if (!check) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Rất tiếc, bạn không có quyền truy cập vào danh sách này.");
             return ResponseEntity.status(403).body(response);
         }
         try{
@@ -87,7 +87,7 @@ public class AdminService {
         }
         catch (Exception e) {
             response.put("status", "fail");
-            response.put("message", "Lỗi khi lấy danh sách người dùng: " + e.getMessage());
+            response.put("message", "Đã xảy ra lỗi khi lấy danh sách người dùng: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -96,24 +96,24 @@ public class AdminService {
         Map<String, Object> response = new HashMap<>();
         if (!check) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền thực hiện thao tác cấm người dùng.");
             return ResponseEntity.status(403).body(response);
         }
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             response.put("status", "fail");
-            response.put("message", "Người dùng không tồn tại");
+            response.put("message", "Người dùng không tồn tại trên hệ thống.");
             return ResponseEntity.status(404).body(response);
         }
         if( !user.isActive()) {
             response.put("status", "fail");
-            response.put("message", "Người dùng đã bị cấm trước đó");
+            response.put("message", "Tài khoản người dùng này đã bị cấm từ trước.");
             return ResponseEntity.status(400).body(response);
         }
         user.setActive(false);
         userRepository.save(user);
         response.put("status", "success");
-        response.put("message", "Người dùng đã bị cấm thành công");
+        response.put("message", "Đã cấm người dùng thành công.");
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> unbanUser(String token, long userId) {
@@ -121,43 +121,43 @@ public class AdminService {
         Map<String, Object> response = new HashMap<>();
         if (!check) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền thực hiện thao tác mở khóa người dùng.");
             return ResponseEntity.status(403).body(response);
         }
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             response.put("status", "fail");
-            response.put("message", "Người dùng không tồn tại");
+            response.put("message", "Người dùng không tồn tại trên hệ thống.");
             return ResponseEntity.status(404).body(response);
         }
         if(user.isActive()) {
             response.put("status", "fail");
-            response.put("message", "Người dùng không bị cấm");
+            response.put("message", "Tài khoản người dùng hiện không bị cấm.");
             return ResponseEntity.status(400).body(response);
         }
         user.setActive(true);
         userRepository.save(user);
         response.put("status", "success");
-        response.put("message", "Người dùng đã được mở khóa thành công");
+        response.put("message", "Đã mở khóa người dùng thành công.");
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> deleteUser(String token, long userId) {
-    boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
+        boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
         if (!check) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền xóa người dùng.");
             return ResponseEntity.status(403).body(response);
         }
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             response.put("status", "fail");
-            response.put("message", "Người dùng không tồn tại");
+            response.put("message", "Người dùng không tồn tại trên hệ thống.");
             return ResponseEntity.status(404).body(response);
         }
         userRepository.delete(user);
         response.put("status", "success");
-        response.put("message", "Người dùng đã được xóa thành công");
+        response.put("message", "Đã xóa người dùng khỏi hệ thống thành công.");
         return ResponseEntity.ok(response);
     }
 }

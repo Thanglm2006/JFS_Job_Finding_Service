@@ -43,129 +43,129 @@ public class ApplicationService {
 
     public ResponseEntity<?> applyForJob(String token, String jobId, String position, String cv) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
+            return ResponseEntity.status(401).body("Truy cập trái phép. Vui lòng đăng nhập lại.");
         }
         if(!jwtUtil.checkWhetherIsApplicant(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to apply for jobs");
+            return ResponseEntity.status(403).body("Bạn không có quyền thực hiện thao tác ứng tuyển.");
         }
         if(position!= null && position.isEmpty()|| position.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Position cannot be empty");
+            return ResponseEntity.badRequest().body("Vị trí ứng tuyển không được để trống.");
         }
         String finalPosition = position.replace("_"," ");
         Applicant applicant = jwtUtil.getApplicant(token);
         JobPost job= jobPostRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
         Application application = new Application(job, applicant,finalPosition,cv);
         application.setAppliedAt(Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(job.getEmployer().getUser());
-        notification.setMessage(applicant.getUser().getFullName()+"đã gửi đơn xin việc cho " + job.getTitle());
+        notification.setMessage(applicant.getUser().getFullName() + " đã nộp đơn ứng tuyển cho vị trí " + job.getTitle());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
-        return ResponseEntity.ok("Application submitted successfully for job ID: " + jobId);
+        return ResponseEntity.ok("Đã nộp đơn ứng tuyển thành công cho công việc: " + job.getTitle());
     }
     public ResponseEntity<?> unApplyForJob(String token, String jobId) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
+            return ResponseEntity.status(401).body("Truy cập trái phép.");
         }
         if(!jwtUtil.checkWhetherIsApplicant(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to unapply for jobs");
+            return ResponseEntity.status(403).body("Bạn không có quyền rút đơn ứng tuyển.");
         }
         Applicant applicant = jwtUtil.getApplicant(token);
         JobPost job = jobPostRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
         Application application = applicationRepository.findByJobAndApplicant(job, applicant)
-                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn ứng tuyển của bạn cho công việc này."));
         applicationRepository.delete(application);
         Notification notification = new Notification();
         notification.setUser(job.getEmployer().getUser());
-        notification.setMessage("Application for job ID " + jobId + " has been withdrawn by applicant " + applicant.getUser().getFullName());
+        notification.setMessage("Đơn ứng tuyển cho công việc " + job.getTitle() + " đã được rút bởi ứng viên " + applicant.getUser().getFullName());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
-        return ResponseEntity.ok("Application withdrawn successfully for job ID: " + jobId);
+        return ResponseEntity.ok("Đã rút đơn ứng tuyển thành công.");
     }
     public ResponseEntity<?> accept(String token, String jobId, String applicantId, LocalDateTime interview) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
+            return ResponseEntity.status(401).body("Truy cập trái phép.");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to accept applications");
+            return ResponseEntity.status(403).body("Bạn không có quyền phê duyệt đơn ứng tuyển.");
         }
 
         Applicant applicant = applicantRepository.findById(applicantId)
-                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ứng viên với ID: " + applicantId));
         JobPost job= jobPostRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
         Application application = applicationRepository.findByJobAndApplicant(job, applicant)
-                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn ứng tuyển tương ứng."));
         if (!job.getEmployer().getUser().getEmail().equals(jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(403).body("You do not own this job post");
+            return ResponseEntity.status(403).body("Bạn không có quyền quản lý bài đăng tuyển dụng này.");
         }
         if (application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
-            return ResponseEntity.status(400).body("Application already accepted");
+            return ResponseEntity.status(400).body("Đơn ứng tuyển này đã được chấp nhận từ trước.");
         }
         application.setStatus(ApplicationStatus.ACCEPTED);
         application.setAppliedAt(Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
-        notification.setMessage("Bạn đã được nhận vào làm việc cho vị trí " + application.getPosition() + " cho " + job.getEmployer().getUser().getFullName());
+        notification.setMessage("Chúc mừng! Bạn đã được nhận vào làm việc tại vị trí " + application.getPosition() + " cho " + job.getEmployer().getOrgName());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
-        return ResponseEntity.ok("Application accepted successfully for job ID: " + job.getId());
+        return ResponseEntity.ok("Đã phê duyệt đơn ứng tuyển thành công.");
     }
     public ResponseEntity<?> reject(String token, String jobId, String applicantId, String reason) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
+            return ResponseEntity.status(401).body("Truy cập trái phép.");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to reject applications");
+            return ResponseEntity.status(403).body("Bạn không có quyền từ chối đơn ứng tuyển.");
         }
 
         Applicant applicant = applicantRepository.findById(applicantId)
-                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ứng viên với ID: " + applicantId));
         JobPost job= jobPostRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
         Application application = applicationRepository.findByJobAndApplicant(job, applicant)
-                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn ứng tuyển tương ứng."));
         if (!job.getEmployer().getUser().getEmail().equals(jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(403).body("You do not own this job post");
+            return ResponseEntity.status(403).body("Bạn không có quyền quản lý bài đăng tuyển dụng này.");
         }
         if (application.getStatus().equals(ApplicationStatus.REJECTED) ){
-            return ResponseEntity.status(400).body("Application already rejected");
+            return ResponseEntity.status(400).body("Đơn ứng tuyển này đã bị từ chối trước đó.");
         }
         application.setStatus(ApplicationStatus.REJECTED);
         application.setReason(reason);
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
-        notification.setMessage("Đơn xin việc bị từ chối bởi" + job.getEmployer().getUser().getFullName() + " cho vị trí " + application.getPosition());
+        notification.setMessage("Rất tiếc, đơn ứng tuyển của bạn tại " + job.getEmployer().getOrgName() + " cho vị trí " + application.getPosition() + " đã bị từ chối.");
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
-        return ResponseEntity.ok("Application rejected for applicant " + applicant.getUser().getFullName());
+        return ResponseEntity.ok("Đã từ chối đơn ứng tuyển của ứng viên " + applicant.getUser().getFullName());
     }
 
     public ResponseEntity<?> getAllApplicationForEmployer(String token){
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
+            return ResponseEntity.status(401).body("Truy cập trái phép.");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to view applications");
+            return ResponseEntity.status(403).body("Bạn không có quyền xem danh sách ứng tuyển.");
         }
         Employer employer = jwtUtil.getEmployer(token);
         if (employer == null) {
-            return ResponseEntity.status(404).body("Employer not found");
+            return ResponseEntity.status(404).body("Không tìm thấy thông tin nhà tuyển dụng.");
         }
         List<JobPost> jobPosts = jobPostRepository.findByEmployer(employer);
         Map<String, Object> response = new HashMap<>();
         if (jobPosts.isEmpty()) {
             response.put("status", "fail");
-            response.put("message", "No job posts found for this employer");
+            response.put("message", "Hiện tại bạn chưa có bài đăng tuyển dụng nào.");
             return ResponseEntity.ok(response);
         }
         List<Map<String, Object>> applications = jobPosts.stream().flatMap(jobPost -> {
@@ -229,13 +229,13 @@ public class ApplicationService {
         Map<String, Object> response = new HashMap<>();
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền truy cập vào danh sách này.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         Applicant applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
             response.put("status", "fail");
-            response.put("message", "Người dùng không phải là ứng viên");
+            response.put("message", "Tài khoản của bạn không phải là ứng viên.");
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "appliedAt"));

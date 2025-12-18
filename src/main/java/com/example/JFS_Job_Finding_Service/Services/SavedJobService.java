@@ -45,14 +45,14 @@ public class SavedJobService {
 
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "Unauthorized access");
+            response.put("message", "Truy cập trái phép.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
 
         Applicant applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
             response.put("status", "fail");
-            response.put("message", "Applicant not found");
+            response.put("message", "Không tìm thấy thông tin ứng viên.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
         JobPost jobPost = jobPostRepository.findById(jobId).get();
@@ -60,7 +60,7 @@ public class SavedJobService {
         savedJobRepository.save(savedJob);
 
         response.put("status", "success");
-        response.put("message", "Job saved successfully");
+        response.put("message", "Đã lưu công việc thành công.");
         System.out.println("Job saved successfully for applicant: " + applicant.getId() + " and job: " + jobPost.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -69,32 +69,32 @@ public class SavedJobService {
 
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "Unauthorized access");
+            response.put("message", "Truy cập trái phép.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
 
         Applicant applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
             response.put("status", "fail");
-            response.put("message", "Applicant not found");
+            response.put("message", "Không tìm thấy thông tin ứng viên.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
         JobPost job= jobPostRepository.findById(jobId).orElse(null);
         if (job == null) {
             response.put("status", "fail");
-            response.put("message", "Job not found");
+            response.put("message", "Công việc không tồn tại.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
         SavedJob savedJob = savedJobRepository.findByApplicantAndJob(applicant, job).get(0);
         if (savedJob == null) {
             response.put("status", "fail");
-            response.put("message", "Saved job not found");
+            response.put("message", "Không tìm thấy công việc đã lưu.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
 
         savedJobRepository.delete(savedJob);
         response.put("status", "success");
-        response.put("message", "Job unsaved successfully");
+        response.put("message", "Đã bỏ lưu công việc thành công.");
         System.out.println("Job unsaved successfully for applicant: " + applicant.getId() + " and job: " + job.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -103,14 +103,14 @@ public class SavedJobService {
 
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "Unauthorized access");
+            response.put("message", "Truy cập trái phép.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
 
         Applicant applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
             response.put("status", "fail");
-            response.put("message", "Applicant not found");
+            response.put("message", "Không tìm thấy thông tin ứng viên.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "SavedAt"));

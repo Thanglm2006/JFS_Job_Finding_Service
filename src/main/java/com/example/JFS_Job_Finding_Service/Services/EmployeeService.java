@@ -35,24 +35,24 @@ public class EmployeeService {
         HashMap<String, Object> response = new HashMap<>();
         if(!jwtUtil.checkPermission(token, "Employer")){
             response.put("status", "fail");
-            response.put("message", "You do not have permission to view staffs");
+            response.put("message", "Bạn không có quyền xem danh sách nhân sự.");
             return ResponseEntity.status(403).body(response);
         }
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "Unauthorized access");
+            response.put("message", "Truy cập trái phép. Vui lòng đăng nhập lại.");
             return ResponseEntity.status(401).body(response);
         }
         Employer employer = jwtUtil.getEmployer(token);
         if (employer == null) {
             response.put("status", "fail");
-            response.put("message", "Employer not found");
+            response.put("message", "Không tìm thấy thông tin nhà tuyển dụng.");
             return ResponseEntity.status(404).body(response);
         }
         List<JobPost> jobPosts = jobPostRepository.findByEmployer(employer);
         if (jobPosts.isEmpty()) {
             response.put("status", "fail");
-            response.put("message", "No job posts found for this employer");
+            response.put("message", "Nhà tuyển dụng này hiện chưa có bài đăng nào.");
             return ResponseEntity.ok(response);
         }
         List<Map<String,Object>> staffs = new ArrayList<>();
@@ -79,28 +79,28 @@ public class EmployeeService {
     }
     public ResponseEntity<?> deletestaff(String token, String applicantId, String jobId){
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Unauthorized access");
+            return ResponseEntity.status(401).body("Truy cập trái phép.");
         }
         if(!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("You do not have permission to delete staff");
+            return ResponseEntity.status(403).body("Bạn không có quyền thực hiện thao tác xóa nhân sự.");
         }
         Employer employer = jwtUtil.getEmployer(token);
         Applicant applicant = applicantRepository.findById(applicantId)
-                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ứng viên với ID: " + applicantId));
         JobPost jobPost= jobPostRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
         Application application= applicationRepository.findByJobAndApplicant(jobPost, applicant)
-                .orElseThrow(() -> new RuntimeException("Application not found for job ID: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn ứng tuyển cho công việc mã: " + jobId));
         if (application == null || !application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
-            return ResponseEntity.status(404).body("Application not found or not accepted for this job post");
+            return ResponseEntity.status(404).body("Không tìm thấy đơn ứng tuyển hợp lệ cho vị trí này.");
 
         }
         applicationRepository.delete(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
-        notification.setMessage("Bạn đã bị đuổi việc " + application.getPosition() + " bởi " + employer.getUser().getFullName());
+        notification.setMessage("Hợp đồng làm việc vị trí " + application.getPosition() + " đã kết thúc bởi " + employer.getUser().getFullName());
         notification.setRead(false);
         notificationRepository.save(notification);
-        return ResponseEntity.ok("Staff deleted successfully");
+        return ResponseEntity.ok("Đã xóa nhân sự khỏi hệ thống thành công.");
     }
 }

@@ -77,6 +77,65 @@ public class UserService {
     }
 
 
+    public ResponseEntity<?> EmployerLogin(String email, String password) {
+        return genericLogin(email, password, "Employer");
+    }
+
+    public ResponseEntity<?> ApplicantLogin(String email, String password) {
+        return genericLogin(email, password, "Applicant");
+    }
+
+    private ResponseEntity<?> genericLogin(String email, String password, String requiredRole) {
+        Map<String, Object> response = new HashMap<>();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            response.put("error", "User not found");
+            response.put("message", "Tài khoản không tồn tại trên hệ thống.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        User user = userOpt.get();
+
+        boolean roleValid = false;
+        if ("Employer".equals(requiredRole)) {
+            roleValid = employerRepository.findByUser(user).isPresent();
+        } else if ("Applicant".equals(requiredRole)) {
+            roleValid = applicantRepository.findByUser(user).isPresent();
+        }
+
+        if (!roleValid || !user.getRole().equalsIgnoreCase(requiredRole)) {
+            response.put("error", "Wrong role");
+            response.put("message", "Tài khoản không đúng vai trò truy cập hoặc không tồn tại.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            response.put("error", "Invalid password");
+            response.put("message", "Mật khẩu không chính xác. Vui lòng thử lại.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!user.isActive()) {
+            response.put("error", "User banned/inactive");
+            response.put("message", "Tài khoản của bạn hiện đang bị khóa hoặc chưa được kích hoạt.");
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
+        response.put("status", "success");
+        response.put("token", token);
+        response.put("user", user);
+
+        if ("Employer".equals(requiredRole)) {
+            employerRepository.findByUser(user).ifPresent(e -> response.put("employer", e));
+        } else {
+            applicantRepository.findByUser(user).ifPresent(a -> response.put("applicant", a));
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
     public ResponseEntity<?> EmployerRegister(EmployerRegisterRequest request) {
         Map<String, Object> response = new HashMap<>();
 
@@ -97,7 +156,7 @@ public class UserService {
 
         if (request.getOrg() == null || request.getOrg().trim().isEmpty()) {
             response.put("error", "Invalid org");
-            response.put("message", "Tên tổ chức không được để trống.");
+            response.put("message", "Tên tổ chức/doanh nghiệp không được để trống.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
@@ -113,33 +172,43 @@ public class UserService {
 
         return processPendingRegistration(user, employer, null);
     }
+
     public ResponseEntity<?> acceptEmployerRegistration(String token, reviewEmployerDTO dto) {
         Map<String, Object> response = new HashMap<>();
-        if(!jwtUtil.checkPermission(token,"admin")&&!jwtUtil.validateToken(token)){
+        if(!jwtUtil.checkPermission(token,"admin") && !jwtUtil.validateToken(token)){
             response.put("error", "Invalid access");
+            response.put("message", "Bạn không có quyền thực hiện thao tác phê duyệt này.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         Employer employer =  employerRepository.findById(dto.getEmployerId()).orElse(null);
-        if(employer == null) return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        if(employer == null) {
+            response.put("message", "Không tìm thấy thông tin nhà tuyển dụng.");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
         employer.setStatus(VerificationStatus.VERIFIED);
         employerRepository.save(employer);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("message", "Đã phê duyệt tài khoản nhà tuyển dụng thành công."));
     }
+
     public ResponseEntity<?> rejectEmployerRegistration(String token, reviewEmployerDTO dto) {
         Map<String, Object> response = new HashMap<>();
-        if(!jwtUtil.checkPermission(token,"admin")&&!jwtUtil.validateToken(token)){
+        if(!jwtUtil.checkPermission(token,"admin") && !jwtUtil.validateToken(token)){
             response.put("error", "Invalid access");
+            response.put("message", "Bạn không có quyền thực hiện thao tác từ chối này.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         Employer employer =  employerRepository.findById(dto.getEmployerId()).orElse(null);
-        if(employer == null) return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        if(employer == null) {
+            response.put("message", "Không tìm thấy thông tin nhà tuyển dụng.");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
         employer.setStatus(VerificationStatus.REJECTED);
         employer.setRejectionReason(dto.getReason());
         employerRepository.save(employer);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("message", "Đã từ chối yêu cầu đăng ký của nhà tuyển dụng."));
     }
+
     public ResponseEntity<?> ApplicantRegister(ApplicantRegisterRequest request) {
-        // Validate chung
         ResponseEntity<?> validationError = validateRegistrationRequest(
                 request.getEmail(), request.getPassword(), request.getPassword(),
                 request.getName(), request.getDateOfBirth(), request.getGender()
@@ -174,13 +243,13 @@ public class UserService {
         } catch (Exception e) {
             log.error("Failed to send email to {}", email, e);
             response.put("error", "Mail send failed");
-            response.put("message", "Không thể gửi email xác nhận. Vui lòng thử lại sau.");
+            response.put("message", "Hệ thống gặp sự cố khi gửi email xác nhận. Vui lòng thử lại sau.");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         pendingRegisterMap.put(email, pendingRegistration);
         response.put("status", "success");
-        response.put("message", "Mã xác nhận đã được gửi. Vui lòng kiểm tra email!");
+        response.put("message", "Mã xác nhận đã được gửi thành công. Vui lòng kiểm tra hộp thư email của bạn!");
         return ResponseEntity.ok(response);
     }
 
@@ -207,19 +276,19 @@ public class UserService {
 
         if (!pass.equals(confirmPass)) {
             response.put("error", "Password mismatch");
-            response.put("message", "Mật khẩu không khớp!");
+            response.put("message", "Mật khẩu xác nhận không trùng khớp.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
         if (userRepository.findByEmail(email).isPresent()) {
             response.put("error", "Duplicate email");
-            response.put("message", "Email này đã được sử dụng!");
+            response.put("message", "Địa chỉ email này đã được sử dụng trên hệ thống.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
         if (name == null || !name.matches("^[\\p{L} ]+$")) {
             response.put("error", "Invalid name format");
-            response.put("message", "Tên chỉ được chứa chữ cái và khoảng trắng.");
+            response.put("message", "Họ tên không hợp lệ. Vui lòng chỉ sử dụng chữ cái và khoảng trắng.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
@@ -228,26 +297,24 @@ public class UserService {
             int age = Period.between(birthDate, LocalDate.now()).getYears();
             if (age < 15) {
                 response.put("error", "Age violation");
-                response.put("message", "Bạn phải từ 15 tuổi trở lên để đăng ký.");
+                response.put("message", "Bạn phải từ đủ 15 tuổi trở lên để có thể đăng ký tài khoản.");
                 return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
             }
         } else {
             response.put("error", "Missing Date");
-            response.put("message", "Vui lòng nhập ngày sinh.");
+            response.put("message", "Vui lòng cung cấp đầy đủ thông tin ngày sinh.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
         String normalizedGender = (gender != null) ? gender.toLowerCase() : "";
         if (!List.of("male", "female", "other").contains(normalizedGender)) {
             response.put("error", "Invalid gender");
-            response.put("message", "Giới tính không hợp lệ (male, female, other).");
+            response.put("message", "Giới tính không hợp lệ. Vui lòng chọn male, female hoặc other.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        return null; // No error
+        return null;
     }
-
-    // --- Verification Logic ---
 
     public ResponseEntity<?> sendVerificationEmailHTML(String email) {
         Map<String, Object> response = new HashMap<>();
@@ -255,7 +322,7 @@ public class UserService {
 
         if (pendingReg == null) {
             response.put("error", "Invalid");
-            response.put("message", "Yêu cầu đăng ký không tồn tại hoặc đã hết hạn!");
+            response.put("message", "Yêu cầu đăng ký không tồn tại hoặc phiên làm việc đã hết hạn.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
@@ -268,10 +335,10 @@ public class UserService {
         try {
             mailService.sendVerificationEmailHTML(email, code);
         } catch (MessagingException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Lỗi hệ thống khi gửi email.");
         }
         response.put("status", "success");
-        response.put("message", "Mã xác nhận mới đã được gửi.");
+        response.put("message", "Mã xác nhận mới đã được gửi tới email của bạn.");
         return ResponseEntity.ok(response);
     }
 
@@ -283,20 +350,20 @@ public class UserService {
 
         if (pendingReg == null) {
             response.put("error", "Invalid request");
-            response.put("message", "Yêu cầu không hợp lệ.");
+            response.put("message", "Yêu cầu xác thực không hợp lệ.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
         if (LocalDateTime.now().isAfter(pendingReg.getExpiryTime())) {
-            pendingRegisterMap.remove(email); // Xóa nếu đã hết hạn
+            pendingRegisterMap.remove(email);
             response.put("error", "Expired");
-            response.put("message", "Mã xác nhận đã hết hạn!");
+            response.put("message", "Mã xác nhận của bạn đã hết hạn. Vui lòng yêu cầu mã mới.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
         if (!pendingReg.getVerificationCode().equalsIgnoreCase(verifyEmailDTO.getCode())) {
             response.put("error", "Wrong code");
-            response.put("message", "Mã xác nhận không đúng.");
+            response.put("message", "Mã xác nhận không chính xác.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
@@ -306,82 +373,19 @@ public class UserService {
 
         if (pendingReg.getApplicant() != null) {
             Applicant applicant = pendingReg.getApplicant();
-            applicant.setUser(savedUser); // Link lại ID đã save
+            applicant.setUser(savedUser);
             applicantRepository.save(applicant);
         } else if (pendingReg.getEmployer() != null) {
             Employer employer = pendingReg.getEmployer();
-            employer.setUser(savedUser); // Link lại ID đã save
+            employer.setUser(savedUser);
             employerRepository.save(employer);
         }
 
-        pendingRegisterMap.remove(email); // Clean up
+        pendingRegisterMap.remove(email);
         response.put("status", "success");
-        response.put("message", "Xác minh email thành công!");
+        response.put("message", "Chúc mừng! Email của bạn đã được xác minh thành công.");
         return ResponseEntity.ok(response);
     }
-
-    // --- Login Logic ---
-
-    public ResponseEntity<?> EmployerLogin(String email, String password) {
-        return genericLogin(email, password, "Employer");
-    }
-
-    public ResponseEntity<?> ApplicantLogin(String email, String password) {
-        return genericLogin(email, password, "Applicant");
-    }
-
-    private ResponseEntity<?> genericLogin(String email, String password, String requiredRole) {
-        Map<String, Object> response = new HashMap<>();
-        Optional<User> userOpt = userRepository.findByEmail(email);
-
-        if (userOpt.isEmpty()) {
-            response.put("error", "User not found");
-            response.put("message", "Tài khoản không tồn tại!");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-
-        User user = userOpt.get();
-
-        boolean roleValid = false;
-        if ("Employer".equals(requiredRole)) {
-            roleValid = employerRepository.findByUser(user).isPresent();
-        } else if ("Applicant".equals(requiredRole)) {
-            roleValid = applicantRepository.findByUser(user).isPresent();
-        }
-
-        if (!roleValid || !user.getRole().equalsIgnoreCase(requiredRole)) {
-            response.put("error", "Wrong role");
-            response.put("message", "Tài khoản không tồn tại hoặc sai vai trò!");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            response.put("error", "Invalid password");
-            response.put("message", "Sai mật khẩu!");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-
-        if (!user.isActive()) {
-            response.put("error", "User banned/inactive");
-            response.put("message", "Tài khoản chưa kích hoạt hoặc bị khóa!");
-            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
-        }
-
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
-        response.put("status", "success");
-        response.put("token", token);
-        response.put("user", user);
-
-        if ("Employer".equals(requiredRole)) {
-            employerRepository.findByUser(user).ifPresent(e -> response.put("employer", e));
-        } else {
-            applicantRepository.findByUser(user).ifPresent(a -> response.put("applicant", a));
-        }
-
-        return ResponseEntity.ok(response);
-    }
-
-    // --- Profile Management ---
 
     public ResponseEntity<?> getProfile(String token, Long userId) {
         Map<String, Object> response = new HashMap<>();
@@ -389,19 +393,18 @@ public class UserService {
 
         if (!tokenService.validateToken(token, email)) {
             response.put("status", "fail");
-            response.put("message", "Unauthorized access");
+            response.put("message", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
 
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
             response.put("status", "fail");
-            response.put("message", "User not found");
+            response.put("message", "Không tìm thấy thông tin người dùng.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
         User user = userOpt.get();
 
-        // Build response common fields
         response.put("phone", user.getPhone());
         response.put("address", user.getAddress());
         response.put("gender", user.getGender());
@@ -420,7 +423,7 @@ public class UserService {
                 response.put("resume", applicant.get().getResume());
             } else {
                 response.put("status", "fail");
-                response.put("message", "Applicant profile missing");
+                response.put("message", "Hồ sơ ứng viên không đầy đủ.");
             }
         } else if ("Employer".equals(user.getRole())) {
             Optional<Employer> employer = employerRepository.findByUser(user);
@@ -429,11 +432,10 @@ public class UserService {
                 response.put("employerId", employer.get().getId());
                 response.put("organization", employer.get().getOrgName());
                 response.put("field", employer.get().getType());
-                // Return verification info if needed
                 response.put("verificationStatus", employer.get().getStatus());
             } else {
                 response.put("status", "fail");
-                response.put("message", "Employer profile missing");
+                response.put("message", "Hồ sơ nhà tuyển dụng không đầy đủ.");
             }
         }
         return ResponseEntity.ok(response);
@@ -443,12 +445,12 @@ public class UserService {
         Map<String, Object> response = new HashMap<>();
         String email = jwtUtil.extractEmail(token);
         if (!tokenService.validateToken(token, email)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Phiên đăng nhập đã hết hạn."));
         }
 
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Người dùng không tồn tại."));
         }
 
         try {
@@ -458,10 +460,11 @@ public class UserService {
             userRepository.save(user);
             response.put("status", "success");
             response.put("avatarUrl", avatarUrl);
+            response.put("message", "Cập nhật ảnh đại diện thành công.");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("status", "fail");
-            response.put("message", "Failed to upload: " + e.getMessage());
+            response.put("message", "Lỗi trong quá trình tải ảnh lên: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -469,21 +472,19 @@ public class UserService {
     @Transactional
     public ResponseEntity<?> updateProfile(String token, UpdateProfile dto) {
         if (!tokenService.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Truy cập trái phép."));
         }
 
         String email = jwtUtil.extractEmail(token);
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Không tìm thấy người dùng."));
         }
 
-        // Basic Validation
         if (dto.getName() == null || dto.getPhoneNumber() == null || dto.getLocation() == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Required fields missing"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng cung cấp đầy đủ thông tin bắt buộc."));
         }
 
-        // Update User Common Fields
         user.setFullName(dto.getName());
         user.setPhone(dto.getPhoneNumber());
         user.setAddress(dto.getLocation());
@@ -493,55 +494,44 @@ public class UserService {
         try {
             if ("Applicant".equals(user.getRole())) {
                 Applicant applicant = applicantRepository.findByUser(user)
-                        .orElseThrow(() -> new RuntimeException("Applicant data not found"));
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy dữ liệu ứng viên."));
                 applicant.setResume(dto.getResume());
                 applicantRepository.save(applicant);
             } else if ("Employer".equals(user.getRole())) {
                 Employer employer = employerRepository.findByUser(user)
-                        .orElseThrow(() -> new RuntimeException("Employer data not found"));
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy dữ liệu nhà tuyển dụng."));
 
-                // Update Employer Type safe
                 try {
                     employer.setType(EmployerType.valueOf(dto.getEmployerType()));
                 } catch (Exception e) {
                     employer.setType(EmployerType.Other);
                     employer.setCustomType(dto.getEmployerType());
                 }
-
-                // Nếu update org name cần thêm field trong DTO, hiện tại dùng getOrgName nếu DTO chưa có
-                // employer.setOrgName(dto.getOrgName());
-
                 employerRepository.save(employer);
             }
             userRepository.save(user);
-            return ResponseEntity.ok(Map.of("status", "success", "message", "Profile updated"));
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Cập nhật hồ sơ thành công."));
         } catch (Exception e) {
             log.error("Update profile failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Lỗi khi cập nhật hồ sơ: " + e.getMessage()));
         }
     }
 
-
     public ResponseEntity<?> updateEmployerProfileWithS3(String token, EmployerUpdateDTO dto) {
-        Map<String, Object> response = new HashMap<>();
-
-        // 1. Validate Token
         String email = jwtUtil.extractEmail(token);
         if (!tokenService.validateToken(token, email)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Phiên làm việc không hợp lệ."));
         }
 
-        // 2. Find User and Employer
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Không tìm thấy tài khoản người dùng."));
         }
 
         Employer employer = employerRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Employer profile not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ nhà tuyển dụng."));
 
         try {
-            // 3. Upload Files to AWS S3 (if provided)
             if (dto.getBusinessLicense() != null && !dto.getBusinessLicense().isEmpty()) {
                 String licenseUrl = s3Service.uploadFile(dto.getBusinessLicense());
                 employer.setBusinessLicenseUrl(licenseUrl);
@@ -552,14 +542,12 @@ public class UserService {
                 employer.setIdCardFront(idCardUrl);
             }
 
-            // 4. Update User Basic Info
             if (dto.getFullName() != null) user.setFullName(dto.getFullName());
             if (dto.getPhoneNumber() != null) user.setPhone(dto.getPhoneNumber());
             if (dto.getAddress() != null) user.setAddress(dto.getAddress());
             if (dto.getGender() != null) user.setGender(dto.getGender());
             if (dto.getDateOfBirth() != null) user.setDateOfBirth(dto.getDateOfBirth());
 
-            // 5. Update Employer Specific Info
             if (dto.getOrgName() != null) employer.setOrgName(dto.getOrgName());
             if (dto.getTaxCode() != null) employer.setTaxCode(dto.getTaxCode());
             if (dto.getBusinessCode() != null) employer.setBusinessCode(dto.getBusinessCode());
@@ -568,7 +556,6 @@ public class UserService {
             if (dto.getHeadquartersAddress() != null) employer.setHeadquartersAddress(dto.getHeadquartersAddress());
             if (dto.getIdCardNumber() != null) employer.setIdCardNumber(dto.getIdCardNumber());
 
-            // Handle Enum safely
             if (dto.getEmployerType() != null) {
                 try {
                     employer.setType(EmployerType.valueOf(dto.getEmployerType()));
@@ -580,57 +567,52 @@ public class UserService {
 
             if (dto.getCustomType() != null) employer.setCustomType(dto.getCustomType());
 
-            // 6. Save changes
             userRepository.save(user);
             employerRepository.save(employer);
 
-            response.put("status", "success");
-            response.put("message", "Employer profile updated successfully");
-            response.put("employer", employer);
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Hồ sơ doanh nghiệp đã được cập nhật thành công.", "employer", employer));
 
         } catch (IOException e) {
             log.error("S3 Upload error", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Failed to upload files to storage"));
+                    .body(Map.of("message", "Gặp sự cố khi lưu trữ tài liệu lên hệ thống Cloud."));
         } catch (Exception e) {
             log.error("Update failed", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(Map.of("message", "Đã xảy ra lỗi: " + e.getMessage()));
         }
     }
+
     public ResponseEntity<?> UpdateResume(String token, String email, Map<String, Object> resume) {
         if (!tokenService.validateToken(token, email)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid token"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Phiên làm việc không hợp lệ."));
         }
         User user = userRepository.findByEmail(email).orElse(null);
-        if (user == null) return ResponseEntity.badRequest().body(Map.of("message", "User not found"));
+        if (user == null) return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy người dùng."));
 
         Applicant applicant = applicantRepository.findByUser(user).orElse(null);
-        if (applicant == null) return ResponseEntity.badRequest().body(Map.of("message", "Applicant not found"));
+        if (applicant == null) return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy hồ sơ ứng viên tương ứng."));
 
         applicant.setResume(resume);
         applicantRepository.save(applicant);
 
-        return ResponseEntity.ok(Map.of("status", "success", "user", user));
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Cập nhật hồ sơ/CV thành công."));
     }
-
-    // --- Utility Methods ---
 
     public ResponseEntity<?> checkEmail(String email) {
         if (userRepository.findByEmail(email).isPresent()) {
             Map<String, Object> response = new HashMap<>();
             response.put("error", "Duplicate email");
-            response.put("message", "Email đã được sử dụng!");
+            response.put("message", "Địa chỉ email này đã được đăng ký trước đó.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
-        return ResponseEntity.ok(Map.of("status", "success"));
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Email có thể sử dụng."));
     }
 
     public String updatePassword(String email, String oldPass, String password, String confirmPass) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User does not exist"));
-        if (!passwordEncoder.matches(oldPass, user.getPassword())) throw new RuntimeException("Invalid password");
-        if (!password.equals(confirmPass)) throw new RuntimeException("Passwords do not match");
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Người dùng không tồn tại."));
+        if (!passwordEncoder.matches(oldPass, user.getPassword())) throw new RuntimeException("Mật khẩu hiện tại không chính xác.");
+        if (!password.equals(confirmPass)) throw new RuntimeException("Mật khẩu mới và xác nhận mật khẩu không khớp.");
 
         user.setPassword(passwordEncoder.encode(password));
         userRepository.save(user);
@@ -638,7 +620,7 @@ public class UserService {
     }
 
     public String deleteUser(long id) {
-        if (!userRepository.existsById(id)) throw new RuntimeException("User does not exist");
+        if (!userRepository.existsById(id)) throw new RuntimeException("Người dùng không tồn tại.");
         userRepository.deleteById(id);
         return "success";
     }
@@ -647,7 +629,7 @@ public class UserService {
         if (jwtUtil.checkPermission(token, role)) {
             return ResponseEntity.ok(Map.of("result", "accept"));
         }
-        return new ResponseEntity<>(Map.of("result", "deny"), HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>(Map.of("result", "deny", "message", "Bạn không có quyền truy cập vào khu vực này."), HttpStatus.UNAUTHORIZED);
     }
 
     public ResponseEntity<?> isTokenValid(String token, String email) {
@@ -662,21 +644,19 @@ public class UserService {
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "User not found"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy người dùng."));
         }
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Wrong password"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Mật khẩu cung cấp không chính xác."));
         }
-        return ResponseEntity.ok(Map.of("status", "success"));
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Xác thực mật khẩu thành công."));
     }
-
-    // --- Reset Password Logic ---
 
     public ResponseEntity<?> sendResetCode(String email) {
         Map<String, Object> response = new HashMap<>();
         if (userRepository.findByEmail(email).isEmpty()) {
             response.put("error", "Not found");
-            response.put("message", "Email không tồn tại!");
+            response.put("message", "Email không tồn tại trong hệ thống của chúng tôi.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
@@ -688,21 +668,20 @@ public class UserService {
         try {
             mailService.sendResetPasswordCode(email, code);
         } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send email", e);
+            throw new RuntimeException("Gặp lỗi khi gửi email khôi phục mật khẩu.");
         }
 
-        return ResponseEntity.ok(Map.of("status", "success", "message", "Mã xác nhận đã gửi."));
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Mã khôi phục đã được gửi tới email của bạn."));
     }
 
     public ResponseEntity<?> resetPassword(String email, String code, String newPassword, String confirmPassword) {
-        Map<String, Object> response = new HashMap<>();
         if (!newPassword.equals(confirmPassword)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Mật khẩu không khớp!"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Mật khẩu xác nhận không trùng khớp."));
         }
 
         VerificationInfo info = passwordResetMap.get(email);
         if (info == null || info.isExpired() || !info.getCode().equalsIgnoreCase(code)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Mã không hợp lệ hoặc đã hết hạn!"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Mã khôi phục không hợp lệ hoặc đã hết hạn sử dụng."));
         }
 
         User user = userRepository.findByEmail(email).orElseThrow();
@@ -710,10 +689,9 @@ public class UserService {
         userRepository.save(user);
         passwordResetMap.remove(email);
 
-        return ResponseEntity.ok(Map.of("status", "success", "message", "Đặt lại mật khẩu thành công!"));
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Mật khẩu của bạn đã được thay đổi thành công."));
     }
 
-    // Helper class cho Reset Password (giữ nguyên logic cũ nhưng clean hơn)
     private static class VerificationInfo {
         @lombok.Getter
         private final String code;

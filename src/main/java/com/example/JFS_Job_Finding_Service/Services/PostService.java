@@ -42,7 +42,7 @@ public class PostService {
 
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền truy cập chức năng này.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         Applicant applicant= jwtUtil.getApplicant(token);
@@ -86,15 +86,15 @@ public class PostService {
                     postData.put("isApplied", isApplied);
                     return postData;
                 } catch (Exception e) {
-                    System.err.println("⚠️ Error with jobPost ID: " + jobPost.getId());
+                    System.err.println("⚠️ Lỗi tại bài đăng ID: " + jobPost.getId());
                     e.printStackTrace();
-                    throw new RuntimeException("JobPost " + jobPost.getId(), e);
+                    throw new RuntimeException("Bài đăng " + jobPost.getId(), e);
                 }
             }
         }).toList();
 
         response.put("status", "success");
-        response.put("message", "Lấy danh sách bài đăng thành công");
+        response.put("message", "Lấy danh sách bài đăng thành công.");
         response.put("posts", posts);
         response.put("totalPages", jobPostsPage.getTotalPages());
         response.put("currentPage", jobPostsPage.getNumber());
@@ -107,17 +107,17 @@ public class PostService {
 
         if (!tokenService.validateToken(token)) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền truy cập.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
 
         Applicant applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
             response.put("status", "fail");
-            response.put("message", "Người dùng không phải là ứng viên");
+            response.put("message", "Tài khoản của bạn không phải là ứng viên.");
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
-        List<JobPost> jobPosts = jobPostRepository.searchWithPGroonga(pattern); // returns max 10
+        List<JobPost> jobPosts = jobPostRepository.searchWithPGroonga(pattern);
 
         List<Map<String, Object>> posts = jobPosts.stream().map(jobPost -> {
             try {
@@ -163,14 +163,14 @@ public class PostService {
 
                 return postData;
             } catch (Exception e) {
-                System.err.println("⚠️ Error with jobPost ID: " + jobPost.getId());
+                System.err.println("⚠️ Lỗi tại bài đăng ID: " + jobPost.getId());
                 e.printStackTrace();
-                throw new RuntimeException("JobPost " + jobPost.getId(), e);
+                throw new RuntimeException("Bài đăng " + jobPost.getId(), e);
             }
         }).toList();
 
         response.put("status", "success");
-        response.put("message", "Kết quả tìm kiếm");
+        response.put("message", "Kết quả tìm kiếm phù hợp.");
         response.put("posts", posts);
         response.put("totalResults", posts.size());
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -181,14 +181,14 @@ public class PostService {
         Map<String, Object> response = new HashMap<>();
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền truy cập.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Employer employerOptional = jwtUtil.getEmployer(token);
         if (employerOptional == null) {
             response.put("status", "fail");
-            response.put("message", "Người dùng không phải là nhà tuyển dụng");
+            response.put("message", "Tài khoản của bạn không phải là nhà tuyển dụng.");
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
         Page<JobPost> jobPostsPage = jobPostRepository.findByEmployer(employerOptional, pageable);
@@ -219,7 +219,7 @@ public class PostService {
             return postData;
         }).toList();
         response.put("status", "success");
-        response.put("message", "Lấy danh sách bài đăng thành công");
+        response.put("message", "Lấy danh sách bài đăng thành công.");
         response.put("posts", posts);
         response.put("totalPages", jobPostsPage.getTotalPages());
         response.put("currentPage", jobPostsPage.getNumber());
@@ -232,37 +232,37 @@ public class PostService {
                 !jwtUtil.checkPermission(token, "Employer")) {
             System.out.println("Unauthorized access attempt with token: " + token);
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền xóa bài đăng này.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         JobPost jobPost = jobPostRepository.findById(postId).orElse(null);
         if (jobPost == null) {
             response.put("status", "fail");
-            response.put("message", "Bài đăng không tồn tại");
+            response.put("message", "Bài đăng không tồn tại.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
         jobPostRepository.delete(jobPost);
         savedJobRepository.deleteAll(savedJobRepository.findByJob(jobPost));
         Notification notification=new Notification();
         notification.setUser(jobPost.getEmployer().getUser());
-        notification.setMessage("Bài đăng với tiêu đề \"" + jobPost.getTitle() + "\" đã bị xóa.");
+        notification.setMessage("Bài đăng với tiêu đề \"" + jobPost.getTitle() + "\" đã được xóa khỏi hệ thống.");
         notification.setRead(false);
         notificationRepository.save(notification);
         response.put("status", "success");
-        response.put("message", "Xóa bài đăng thành công");
+        response.put("message", "Đã xóa bài đăng thành công.");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
     public ResponseEntity<?> getAppliedJobs(String token, int page, int size) {
-    Map<String, Object> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền truy cập.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         Applicant applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
             response.put("status", "fail");
-            response.put("message", "Người dùng không phải là ứng viên");
+            response.put("message", "Tài khoản của bạn không phải là ứng viên.");
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));

@@ -27,14 +27,14 @@ public class NotificationService {
 
     public ResponseEntity<?> setIsRead(Long notificationId){
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Notification not found with ID: " + notificationId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông báo với ID: " + notificationId));
         notification.setRead(true);
         notificationRepository.save(notification);
-        return ResponseEntity.ok("Notification marked as read successfully");
+        return ResponseEntity.ok("Đã đánh dấu thông báo là đã đọc.");
     }
     public ResponseEntity<?> getAllNotifications(String token) {
         if (token == null || token.isEmpty()) {
-            return ResponseEntity.status(401).body("Unauthorized access");
+            return ResponseEntity.status(401).body("Truy cập trái phép. Vui lòng đăng nhập lại.");
         }
         boolean checkAdmin = jwtUtil.checkPermission(token,"Admin");
         String email = jwtUtil.extractEmail(token);
@@ -42,13 +42,12 @@ public class NotificationService {
 
             Admin admin = adminRepository.findByEmail(email);
             if (admin == null) {
-                return ResponseEntity.status(403).body("You do not have permission to access notifications");
+                return ResponseEntity.status(403).body("Bạn không có quyền truy cập vào thông báo hệ thống.");
             }
             return new ResponseEntity<>(notificationRepository.findAll(), HttpStatus.OK);
         }
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
         return new ResponseEntity<>(notificationRepository.findByUser(user), HttpStatus.OK);
     }
-
 }

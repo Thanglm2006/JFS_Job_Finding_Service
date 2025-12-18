@@ -43,7 +43,7 @@ public class ChatService {
 
     @Autowired
     private MqttPahoClientFactory mqttClientFactory;
-    private final Map<String, String> presenceMap = new ConcurrentHashMap<>();  // userId -> "Online"/"Offline"
+    private final Map<String, String> presenceMap = new ConcurrentHashMap<>();
 
     private MqttPahoMessageDrivenChannelAdapter chatAdapter;
     private MqttPahoMessageDrivenChannelAdapter presenceAdapter;
@@ -52,19 +52,19 @@ public class ChatService {
     private MessageHandler mqttOutboundHandler;
 
     public void saveMessage(long senderId, long recipientId, String message) {
-         User sender = userRepository.findById(senderId).orElseThrow(() -> new RuntimeException("Sender not found"));
-         User recipient = userRepository.findById(recipientId).orElseThrow(() -> new RuntimeException("Recipient not found"));
+        User sender = userRepository.findById(senderId).orElseThrow(() -> new RuntimeException("Không tìm thấy người gửi."));
+        User recipient = userRepository.findById(recipientId).orElseThrow(() -> new RuntimeException("Không tìm thấy người nhận."));
         chatMessageRepository.save(new ChatMessage(sender, recipient, message));
     }
     public void saveImage(long senderId, long recipientId, String fileUrl) {
-        User sender = userRepository.findById(senderId).orElseThrow(() -> new RuntimeException("Sender not found"));
-        User recipient = userRepository.findById(recipientId).orElseThrow(() -> new RuntimeException("Recipient not found"));
+        User sender = userRepository.findById(senderId).orElseThrow(() -> new RuntimeException("Không tìm thấy người gửi."));
+        User recipient = userRepository.findById(recipientId).orElseThrow(() -> new RuntimeException("Không tìm thấy người nhận."));
         ChatMessage chatMessage = new ChatMessage(sender, recipient," ", fileUrl);
         chatMessageRepository.save(chatMessage);
     }
     public ResponseEntity<?> getAllMessages(long senderId, long receiverId, int page) {
-        User sender = userRepository.findById(senderId).orElseThrow(() -> new RuntimeException("User not found"));
-        User receiver = userRepository.findById(receiverId).orElseThrow(() -> new RuntimeException("User not found"));
+        User sender = userRepository.findById(senderId).orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng."));
+        User receiver = userRepository.findById(receiverId).orElseThrow(() -> new RuntimeException("Không tìm thấy người nhận."));
         List<ChatMessage> messagesFromSenderToReceiver = chatMessageRepository.findMessagesFromSenderToReceiver(sender, receiver, PageRequest.of(page, 20));
         List<ChatMessage> messagesFromReceiverToSender = chatMessageRepository.findMessagesFromSenderToReceiver(receiver, sender, PageRequest.of(page, 20));
         List<message> MessageFromSenderToReceiver = new ArrayList<>();
@@ -88,7 +88,7 @@ public class ChatService {
         return ResponseEntity.ok(response);
     }
     public List<userInChat> getAllUsersChattedWith(long userId) {
-        User sender = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        User sender = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng."));
         List<ChatMessage> ress= chatMessageRepository.findAll();
         List<userInChat> u= new ArrayList<>();
         for(ChatMessage m:ress){
@@ -117,26 +117,22 @@ public class ChatService {
 
     @PostConstruct
     public void init() {
-        // Outbound handler for publishing2
         mqttOutboundHandler = new MqttPahoMessageHandler("backend-outbound", mqttClientFactory);
         ((MqttPahoMessageHandler) mqttOutboundHandler).setDefaultQos(1);
         ((MqttPahoMessageHandler) mqttOutboundHandler).setDefaultRetained(false);
 
-        // Inbound for chat messages (/chat/#)
         chatAdapter = new MqttPahoMessageDrivenChannelAdapter("backend-chat-in", mqttClientFactory, "/chat/#");
         chatAdapter.setConverter(new DefaultPahoMessageConverter());
         chatAdapter.setQos(1);
-        chatAdapter.setOutputChannel(chatChannel());  // Define channels as @Beans if needed
+        chatAdapter.setOutputChannel(chatChannel());
         chatAdapter.start();
 
-        // Inbound for presence (/presence/#)
         presenceAdapter = new MqttPahoMessageDrivenChannelAdapter("backend-presence-in", mqttClientFactory, "/presence/#");
         presenceAdapter.setConverter(new DefaultPahoMessageConverter());
         presenceAdapter.setQos(1);
         presenceAdapter.setOutputChannel(presenceChannel());
         presenceAdapter.start();
 
-        // Inbound for user list requests (/request/users/#)
         requestAdapter = new MqttPahoMessageDrivenChannelAdapter("backend-request-in", mqttClientFactory, "/request/users/#");
         requestAdapter.setConverter(new DefaultPahoMessageConverter());
         requestAdapter.setQos(1);
@@ -144,7 +140,6 @@ public class ChatService {
         requestAdapter.start();
     }
 
-    // Define channels (can be @Bean in config)
     private MessageChannel chatChannel() {
         return new org.springframework.integration.channel.DirectChannel();
     }
@@ -172,7 +167,7 @@ public class ChatService {
 
         String roomId = getRoomId(senderId, recipientId);
 
-        if (!topic.endsWith(roomId)) return;  // Validate topic
+        if (!topic.endsWith(roomId)) return;
 
         switch (type) {
             case "text":
@@ -188,7 +183,6 @@ public class ChatService {
                     tempFile = tempFilePath.toFile();
                     String url = cloudinaryService.uploadFile(tempFile);
                     saveImage(senderId, recipientId, url);
-                    // Republish with URL
                     Map<String, Object> response = Map.of(
                             "type", "Image",
                             "sender", senderId.toString(),
@@ -198,10 +192,9 @@ public class ChatService {
                 } finally {
                     if (tempFile != null) tempFile.delete();
                 }
-                return;  // Don't republish original base64
+                return;
         }
 
-        // Republish original for text
         publishToTopic("/chat/" + roomId, payload, true);
     }
 
@@ -209,15 +202,15 @@ public class ChatService {
     public void handlePresence(Message<?> message) {
         String topic = (String) message.getHeaders().get("mqtt_receivedTopic");
         String status = (String) message.getPayload();
-        String userId = topic.split("/")[2];  // /presence/{userId}
+        String userId = topic.split("/")[2];
         presenceMap.put(userId, status);
-        System.out.println(userId + " is now " + status);
+        System.out.println(userId + " hiện đang " + status);
     }
 
     @ServiceActivator(inputChannel = "requestChannel")
     public void handleUserRequest(Message<?> message) throws Exception {
         String topic = (String) message.getHeaders().get("mqtt_receivedTopic");
-        String userId = topic.split("/")[3];  // /request/users/{userId}
+        String userId = topic.split("/")[3];
         Long userID = Long.parseLong(userId);
 
         List<userInChat> users = getAllUsersChattedWith(userID);

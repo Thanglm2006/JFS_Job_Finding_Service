@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.web.client.RestTemplate;
+
 @Service
 public class PendingJobPostService {
     @Autowired
@@ -47,52 +48,45 @@ public class PendingJobPostService {
     public ResponseEntity<?> addPost(String token, PostingRequest request) {
         Map<String, Object> response = new HashMap<>();
 
-        // 1. Auth & Permission Checks
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized access"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Truy cập trái phép."));
         }
         if (!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Access denied"));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Bạn không có quyền thực hiện thao tác này."));
         }
 
         Employer employer = jwtUtil.getEmployer(token);
         if (employer == null) {
-            return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Please login first!"));
+            return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Vui lòng đăng nhập trước khi tiếp tục!"));
         }
 
-        // 2. Check Employer Status
         switch (employer.getStatus()) {
             case PENDING -> {
-                return ResponseEntity.badRequest().body(Map.of("message", "Pending approval. Please wait."));
+                return ResponseEntity.badRequest().body(Map.of("message", "Tài khoản đang chờ duyệt. Vui lòng kiên nhẫn."));
             }
             case REJECTED -> {
-                return ResponseEntity.badRequest().body(Map.of("message", "Request rejected. Please fix your profile."));
+                return ResponseEntity.badRequest().body(Map.of("message", "Yêu cầu đã bị từ chối. Vui lòng cập nhật lại hồ sơ doanh nghiệp."));
             }
             case BANNED -> {
-                return ResponseEntity.badRequest().body(Map.of("message", "Account banned. Contact support."));
+                return ResponseEntity.badRequest().body(Map.of("message", "Tài khoản đã bị khóa. Vui lòng liên hệ bộ phận hỗ trợ."));
             }
         }
 
-        // 3. Parse Description JSON & Handle Files
         Map<String, Object> descriptionMap;
         String workspacePictureFolder = null;
         try {
-
             descriptionMap = objectMapper.readValue(request.getDescription(), new TypeReference<>() {});
-
             if (request.getFiles() != null && request.getFiles().length > 0) {
                 String folderNameKey = request.getTitle().replaceAll("\\s+", "_") + "_" + System.currentTimeMillis();
                 workspacePictureFolder = cloudinaryService.uploadFiles(request.getFiles(), folderNameKey);
             }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("status", "fail", "message", "Error parsing data or uploading files: " + e.getMessage()));
+                    .body(Map.of("status", "fail", "message", "Lỗi khi xử lý dữ liệu hoặc tải ảnh: " + e.getMessage()));
         }
 
-        // 4. Scam Check Logic
         try {
-            // Flatten description map for checking
-            if(request.getPositions().length==0) return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Please specify positions."));
+            if(request.getPositions().length==0) return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Vui lòng chỉ định các vị trí tuyển dụng."));
 
             String rawDesc = descriptionMap.toString();
             String processedDesc = Arrays.stream(rawDesc.replace("{", "").replace("}", "").split(", "))
@@ -117,34 +111,32 @@ public class PendingJobPostService {
 
                 if (scamScore > 0.7) {
                     response.put("status", "fail");
-                    response.put("message", "Post blocked due to suspected scam content.");
+                    response.put("message", "Bài đăng bị hệ thống chặn do nghi ngờ chứa nội dung lừa đảo.");
                     response.put("scam_score", scamScore);
                     return new ResponseEntity<>(response, HttpStatus.NOT_ACCEPTABLE);
                 }
             }
         } catch (Exception e) {
-            System.out.println("⚠️ Warning: Scam API unreachable. Proceeding.");
+            System.out.println("⚠️ Cảnh báo: API kiểm tra lừa đảo không phản hồi. Đang tiếp tục xử lý.");
         }
 
-        // 5. Save Entity
         PendingJobPost jobPost = new PendingJobPost();
         jobPost.setPositions(request.getPositions());
         jobPost.setTitle(request.getTitle());
         jobPost.setEmployer(employer);
-        jobPost.setDescription(descriptionMap); // Save the parsed map
-        jobPost.setWorkspacePicture(workspacePictureFolder); // Save the folder string/url
+        jobPost.setDescription(descriptionMap);
+        jobPost.setWorkspacePicture(workspacePictureFolder);
 
         pendingJobPostRepository.save(jobPost);
 
-        // 6. Notification
         Notification notification = new Notification();
         notification.setUser(employer.getUser());
-        notification.setMessage("Your post has been submitted for review: " + jobPost.getTitle());
+        notification.setMessage("Bài đăng của bạn đã được gửi để duyệt: " + jobPost.getTitle());
         notification.setRead(false);
         notificationRepository.save(notification);
 
         response.put("status", "success");
-        response.put("message", "Post created successfully, pending review!");
+        response.put("message", "Đã tạo bài đăng thành công, đang chờ quản trị viên phê duyệt!");
         response.put("jobPostId", jobPost.getId());
         response.put("jobPost", jobPost);
 
@@ -152,28 +144,26 @@ public class PendingJobPostService {
     }
 
     public ResponseEntity<?> deletePendingPost(String token, long pendingId) {
-
         if(jwtUtil.checkPermission(token, "Admin") || jwtUtil.checkPermission(token, "Applicant")){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền truy cập");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền thực hiện thao tác này.");
         }
         PendingJobPost pendingJobPost = pendingJobPostRepository.findById(pendingId).orElse(null);
         if(pendingJobPost == null){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Bài đăng không tồn tại");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Bài đăng không tồn tại.");
         }
         pendingJobPostRepository.delete(pendingJobPost);
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Đã xóa bài viết thành công với id là: "+pendingId);
+        response.put("message", "Đã xóa bài đăng chờ duyệt thành công. ID: " + pendingId);
         response.put("status", "Success");
         return ResponseEntity.ok(response);
     }
 
-
     public ResponseEntity<?> acceptPost(String token, long pendingId){
         if(!jwtUtil.checkPermission(token, "Admin"))
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền truy cập");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền phê duyệt bài đăng.");
         PendingJobPost pendingJobPost= pendingJobPostRepository.findById(pendingId).orElse(null);
         if(pendingJobPost == null){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Bài đăng không tồn tại");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Bài đăng không tồn tại.");
         }
         JobPost jobPost = new JobPost();
         jobPost.setTitle(pendingJobPost.getTitle());
@@ -186,7 +176,7 @@ public class PendingJobPostService {
         pendingJobPostRepository.delete(pendingJobPost);
         Notification notification = new Notification();
         notification.setUser(pendingJobPost.getEmployer().getUser());
-        notification.setMessage("Bài đăng của bạn đã được duyệt: " + jobPost.getTitle());
+        notification.setMessage("Bài đăng của bạn đã được phê duyệt và hiển thị: " + jobPost.getTitle());
         notification.setRead(false);
         notificationRepository.save(notification);
         Map<String, Object> response = new HashMap<>();
@@ -194,20 +184,21 @@ public class PendingJobPostService {
         response.put("status", "success");
         return ResponseEntity.ok(response);
     }
+
     public ResponseEntity<?> rejectPost(String token, long pendingId){
         if(!jwtUtil.checkPermission(token, "Admin"))
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền truy cập");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền thực hiện thao tác này.");
         PendingJobPost pendingJobPost= pendingJobPostRepository.findById(pendingId).orElse(null);
         if(pendingJobPost == null){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Bài đăng không tồn tại");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Bài đăng không tồn tại.");
         }
         pendingJobPostRepository.delete(pendingJobPost);
         Notification notification = new Notification();
         notification.setUser(pendingJobPost.getEmployer().getUser());
-        notification.setMessage("Bài đăng của bạn đã bị xóa do không tuân theo các quy định về nội dung: " + pendingJobPost.getTitle());
+        notification.setMessage("Bài đăng của bạn đã bị từ chối do không tuân thủ quy định nội dung: " + pendingJobPost.getTitle());
         notification.setRead(false);
         notificationRepository.save(notification);
-        return ResponseEntity.ok("Bài đăng đã bị xóa thành công");
+        return ResponseEntity.ok("Đã từ chối bài đăng thành công.");
     }
 
     public ResponseEntity<?> getSomePendingPosts(String token, int page, int size) {
@@ -215,13 +206,13 @@ public class PendingJobPostService {
 
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền truy cập.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         String[] roles={"Admin","Employer"};
         if (!jwtUtil.checkPermission(token, roles)) {
             response.put("status", "fail");
-            response.put("message", "bạn không có quyền truy cập");
+            response.put("message", "Bạn không có quyền thực hiện chức năng này.");
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
         }
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -253,7 +244,7 @@ public class PendingJobPostService {
         }).toList();
 
         response.put("status", "success");
-        response.put("message", "Lấy danh sách bài đăng chờ duyệt thành công");
+        response.put("message", "Lấy danh sách bài đăng chờ duyệt thành công.");
         response.put("posts", posts);
         response.put("totalPages", pendingJobPostsPage.getTotalPages());
         response.put("currentPage", pendingJobPostsPage.getNumber());
