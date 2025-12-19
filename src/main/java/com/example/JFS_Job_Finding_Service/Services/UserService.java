@@ -130,21 +130,17 @@ public class UserService {
         if(requiredRole.equalsIgnoreCase("Employer")) {
             Employer employer =  employerRepository.findByUser(user).get();
             response.put("employerId", employer.getId());
+            response.put("status",employer.getStatus());
         }
         else{
             Applicant applicant =  applicantRepository.findByUser(user).get();
             response.put("applicantId", applicant.getId());
+            response.put("resume", applicant.getResume());
         }
         response.put("email", user.getEmail());
         response.put("role", user.getRole());
         response.put("fullName", user.getFullName());
         response.put("avatarUrl", user.getAvatarUrl());
-
-        if ("Employer".equals(requiredRole)) {
-            employerRepository.findByUser(user).ifPresent(e -> response.put("employer", e));
-        } else {
-            applicantRepository.findByUser(user).ifPresent(a -> response.put("applicant", a));
-        }
 
         return ResponseEntity.ok(response);
     }
