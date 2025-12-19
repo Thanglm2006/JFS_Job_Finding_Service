@@ -10,16 +10,34 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Repository
 public interface JobPostRepository extends JpaRepository<JobPost, String> {
     Page<JobPost> findByEmployer(Employer employer, Pageable pageable);
     List<JobPost> findByEmployer(Employer employer);
+
     @Query(value = """
-    SELECT * FROM job_post
-    WHERE ARRAY[title, description::text] &@~ :pattern
-    LIMIT 10
-    """, nativeQuery = true)
-    List<JobPost> searchWithPGroonga(@Param("pattern") String pattern);
+        SELECT * FROM filter_job_posts(
+            :keyword, 
+            CAST(:type AS job_type), 
+            :address, 
+            :minSalary, 
+            :maxSalary, 
+            :limit, 
+            :offset
+        )
+        """, nativeQuery = true)
+    List<JobPost> searchWithPGroonga(
+            @Param("keyword") String keyword,
+            @Param("type") String type,       // String will be cast to enum in SQL
+            @Param("address") String address, // Single string address
+            @Param("minSalary") BigDecimal minSalary,
+            @Param("maxSalary") BigDecimal maxSalary,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+
 }

@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.*;
+import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
 import com.example.JFS_Job_Finding_Service.repository.ImageFoldersRepository;
 import com.example.JFS_Job_Finding_Service.repository.JobPostRepository;
 import com.example.JFS_Job_Finding_Service.repository.NotificationRepository;
@@ -18,11 +19,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 import org.springframework.web.client.RestTemplate;
 
@@ -44,6 +47,14 @@ public class PendingJobPostService {
     private CloudinaryService cloudinaryService;
     @Autowired
     private ObjectMapper objectMapper;
+
+    // Helper to format salary
+    private String formatSalary(BigDecimal min, BigDecimal max) {
+        if (min != null && max != null) {
+            return min.toPlainString() + " - " + max.toPlainString();
+        }
+        return "Thương lượng";
+    }
 
     public ResponseEntity<?> addPost(String token, PostingRequest request) {
         Map<String, Object> response = new HashMap<>();
@@ -72,22 +83,46 @@ public class PendingJobPostService {
             }
         }
 
+        // Variable declarations for parsed data
         Map<String, Object> descriptionMap;
+        Map<String, Object> requirementsMap;
+        Map<String, Object> responsibilitiesMap;
+        Map<String, Object> advantagesMap;
+        Map<String, Object> extensionMap = new HashMap<>(); // Default empty if null
         String workspacePictureFolder = null;
+
         try {
+            // Validate required array fields
+            if (request.getPositions() == null || request.getPositions().length == 0) {
+                return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Vui lòng chỉ định các vị trí tuyển dụng."));
+            }
+            if (request.getAddresses() == null || request.getAddresses().length == 0) {
+                return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Vui lòng nhập ít nhất một địa chỉ làm việc."));
+            }
+
+            // Parse JSON String fields to Maps
             descriptionMap = objectMapper.readValue(request.getDescription(), new TypeReference<>() {});
+            requirementsMap = objectMapper.readValue(request.getRequirements(), new TypeReference<>() {});
+            responsibilitiesMap = objectMapper.readValue(request.getResponsibilities(), new TypeReference<>() {});
+            advantagesMap = objectMapper.readValue(request.getAdvantages(), new TypeReference<>() {});
+
+            if (request.getExtension() != null && !request.getExtension().isEmpty()) {
+                extensionMap = objectMapper.readValue(request.getExtension(), new TypeReference<>() {});
+            }
+
+            // Handle file upload
             if (request.getFiles() != null && request.getFiles().length > 0) {
                 String folderNameKey = request.getTitle().replaceAll("\\s+", "_") + "_" + System.currentTimeMillis();
                 workspacePictureFolder = cloudinaryService.uploadFiles(request.getFiles(), folderNameKey);
             }
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("status", "fail", "message", "Lỗi khi xử lý dữ liệu hoặc tải ảnh: " + e.getMessage()));
+                    .body(Map.of("status", "fail", "message", "Lỗi khi xử lý dữ liệu JSON hoặc tải ảnh: " + e.getMessage()));
         }
 
+        // Scam detection logic (Keep existing logic on Title + Description)
         try {
-            if(request.getPositions().length==0) return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Vui lòng chỉ định các vị trí tuyển dụng."));
-
             String rawDesc = descriptionMap.toString();
             String processedDesc = Arrays.stream(rawDesc.replace("{", "").replace("}", "").split(", "))
                     .map(part -> {
@@ -120,27 +155,55 @@ public class PendingJobPostService {
             System.out.println("⚠️ Cảnh báo: bot kiểm tra lừa đảo không phản hồi. Đang tiếp tục xử lý.");
         }
 
-        PendingJobPost jobPost = new PendingJobPost();
-        jobPost.setPositions(request.getPositions());
-        jobPost.setTitle(request.getTitle());
-        jobPost.setEmployer(employer);
-        jobPost.setDescription(descriptionMap);
-        jobPost.setWorkspacePicture(workspacePictureFolder);
+        // Create and Save PendingJobPost
+        try {
+            PendingJobPost jobPost = new PendingJobPost();
+            jobPost.setTitle(request.getTitle());
+            jobPost.setEmployer(employer);
+            jobPost.setPositions(request.getPositions());
 
-        pendingJobPostRepository.save(jobPost);
+            // Set Mapped JSONB fields
+            jobPost.setJobDescription(descriptionMap);
+            jobPost.setRequirements(requirementsMap);
+            jobPost.setResponsibilities(responsibilitiesMap);
+            jobPost.setAdvantages(advantagesMap);
+            jobPost.setExtension(extensionMap);
 
-        Notification notification = new Notification();
-        notification.setUser(employer.getUser());
-        notification.setMessage("Bài đăng của bạn đã được gửi để duyệt: " + jobPost.getTitle());
-        notification.setRead(false);
-        notificationRepository.save(notification);
+            // Set Simple fields
+            jobPost.setAddresses(request.getAddresses());
 
-        response.put("status", "success");
-        response.put("message", "Đã tạo bài đăng thành công, đang chờ quản trị viên phê duyệt!");
-        response.put("jobPostId", jobPost.getId());
-        response.put("jobPost", jobPost);
+            // Set Salary (Check logic handled by DB constraint, but safe to set null if needed)
+            jobPost.setSalaryMin(request.getSalaryMin());
+            jobPost.setSalaryMax(request.getSalaryMax());
 
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+            // Set Enum Type
+            try {
+                jobPost.setType(JobType.valueOf(request.getType()));
+            } catch (IllegalArgumentException | NullPointerException e) {
+                return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Loại công việc không hợp lệ (FULL_TIME, PART_TIME, etc)."));
+            }
+
+            jobPost.setWorkspacePicture(workspacePictureFolder);
+
+            pendingJobPostRepository.save(jobPost);
+
+            Notification notification = new Notification();
+            notification.setUser(employer.getUser());
+            notification.setMessage("Bài đăng của bạn đã được gửi để duyệt: " + jobPost.getTitle());
+            notification.setRead(false);
+            notificationRepository.save(notification);
+
+            response.put("status", "success");
+            response.put("message", "Đã tạo bài đăng thành công, đang chờ quản trị viên phê duyệt!");
+            response.put("jobPostId", jobPost.getId());
+
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "fail", "message", "Lỗi server khi lưu bài đăng: " + e.getMessage()));
+        }
     }
 
     public ResponseEntity<?> deletePendingPost(String token, long pendingId) {
@@ -168,7 +231,15 @@ public class PendingJobPostService {
         JobPost jobPost = new JobPost();
         jobPost.setTitle(pendingJobPost.getTitle());
         jobPost.setEmployer(pendingJobPost.getEmployer());
-        jobPost.setDescription(pendingJobPost.getDescription());
+        jobPost.setJobDescription(pendingJobPost.getJobDescription());
+        jobPost.setRequirements(pendingJobPost.getRequirements());
+        jobPost.setResponsibilities(pendingJobPost.getResponsibilities());
+        jobPost.setAdvantages(pendingJobPost.getAdvantages());
+        jobPost.setExtension(pendingJobPost.getExtension());
+        jobPost.setType(pendingJobPost.getType());
+        jobPost.setAddresses(pendingJobPost.getAddresses());
+        jobPost.setSalaryMin(pendingJobPost.getSalaryMin());
+        jobPost.setSalaryMax(pendingJobPost.getSalaryMax());
         jobPost.setWorkspacePicture(pendingJobPost.getWorkspacePicture());
         jobPost.setCreatedAt(pendingJobPost.getCreatedAt());
         jobPost.setPositions(pendingJobPost.getPositions());
@@ -218,28 +289,14 @@ public class PendingJobPostService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<PendingJobPost> pendingJobPostsPage = pendingJobPostRepository.findAll(pageable);
 
+        // Map to simplified structure
         List<Map<String, Object>> posts = pendingJobPostsPage.getContent().stream().map(pendingJobPost -> {
-            String employerName = pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getOrgName() : "Unknown";
-            List<ImageFolders> folder = List.of();
-            List<String> pics = new java.util.ArrayList<>(List.of());
-            if (pendingJobPost.getWorkspacePicture() != null) {
-                folder = imageFoldersRepository.findByFolderName(pendingJobPost.getWorkspacePicture());
-            }
-            for (ImageFolders imageFolder : folder) {
-                if (imageFolder.getFolderName().equals(pendingJobPost.getWorkspacePicture())) {
-                    pics.add(imageFolder.getFileName());
-                }
-            }
             Map<String, Object> postData = new HashMap<>();
             postData.put("id", pendingJobPost.getId());
             postData.put("title", pendingJobPost.getTitle());
-            postData.put("employerName", employerName);
-            postData.put("employer", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer() : null);
-            postData.put("userId", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getUser().getId() : null);
-            postData.put("description", pendingJobPost.getDescription());
-            postData.put("avatar", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getUser().getAvatarUrl() : null);
-            postData.put("workspacePicture", pics.toArray());
-            postData.put("createdAt", pendingJobPost.getCreatedAt());
+            postData.put("orgName", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getOrgName() : "Unknown");
+            postData.put("salary", formatSalary(pendingJobPost.getSalaryMin(), pendingJobPost.getSalaryMax()));
+            postData.put("type", pendingJobPost.getType());
             return postData;
         }).toList();
 
@@ -249,5 +306,98 @@ public class PendingJobPostService {
         response.put("totalPages", pendingJobPostsPage.getTotalPages());
         response.put("currentPage", pendingJobPostsPage.getNumber());
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getPendingPostsForEmployer(String token, int page, int size) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+            return new ResponseEntity<>(Map.of("status", "fail", "message", "Truy cập trái phép."), HttpStatus.UNAUTHORIZED);
+        }
+
+        Employer employer = jwtUtil.getEmployer(token);
+        if (employer == null) {
+            return new ResponseEntity<>(Map.of("status", "fail", "message", "Bạn không phải là nhà tuyển dụng."), HttpStatus.FORBIDDEN);
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // Assumes pendingJobPostRepository has method: findByEmployer(Employer employer, Pageable pageable)
+        Page<PendingJobPost> pendingJobPostsPage = pendingJobPostRepository.findByEmployer(employer, pageable);
+
+        List<Map<String, Object>> posts = pendingJobPostsPage.getContent().stream().map(pendingJobPost -> {
+            Map<String, Object> postData = new HashMap<>();
+            postData.put("id", pendingJobPost.getId());
+            postData.put("title", pendingJobPost.getTitle());
+            postData.put("orgName", employer.getOrgName());
+            postData.put("salary", formatSalary(pendingJobPost.getSalaryMin(), pendingJobPost.getSalaryMax()));
+            postData.put("type", pendingJobPost.getType());
+            postData.put("createdAt", pendingJobPost.getCreatedAt());
+            return postData;
+        }).toList();
+
+        response.put("status", "success");
+        response.put("message", "Lấy danh sách bài đăng chờ duyệt thành công.");
+        response.put("posts", posts);
+        response.put("totalPages", pendingJobPostsPage.getTotalPages());
+        response.put("currentPage", pendingJobPostsPage.getNumber());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    public ResponseEntity<?> getPendingJobPostDetail(String token, long pendingId) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+            return new ResponseEntity<>(Map.of("status", "fail", "message", "Unauthorized"), HttpStatus.UNAUTHORIZED);
+        }
+
+        PendingJobPost pendingJobPost = pendingJobPostRepository.findById(pendingId).orElse(null);
+        if (pendingJobPost == null) {
+            response.put("status", "fail");
+            response.put("message", "Bài đăng chờ duyệt không tồn tại.");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+
+        try {
+            String employerName = pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getOrgName() : "Unknown";
+
+            // Image handling
+            List<ImageFolders> folder = List.of();
+            List<String> pics = new ArrayList<>();
+            if (pendingJobPost.getWorkspacePicture() != null) {
+                folder = imageFoldersRepository.findByFolderName(pendingJobPost.getWorkspacePicture());
+            }
+            for (ImageFolders imageFolder : folder) {
+                if (imageFolder.getFolderName().equals(pendingJobPost.getWorkspacePicture())) {
+                    pics.add(imageFolder.getFileName());
+                }
+            }
+
+            Map<String, Object> postData = new HashMap<>();
+            postData.put("id", pendingJobPost.getId());
+            postData.put("title", pendingJobPost.getTitle());
+            postData.put("employerName", employerName);
+            postData.put("employerId", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getId() : null);
+            postData.put("description", pendingJobPost.getJobDescription());
+            postData.put("requirements", pendingJobPost.getRequirements());
+            postData.put("responsibilities", pendingJobPost.getResponsibilities());
+            postData.put("advantages", pendingJobPost.getAdvantages());
+            postData.put("extension", pendingJobPost.getExtension());
+            postData.put("type", pendingJobPost.getType());
+            postData.put("addresses", pendingJobPost.getAddresses());
+            postData.put("positions", pendingJobPost.getPositions());
+            postData.put("salaryMin", pendingJobPost.getSalaryMin());
+            postData.put("salaryMax", pendingJobPost.getSalaryMax());
+            postData.put("avatar", pendingJobPost.getEmployer() != null ? pendingJobPost.getEmployer().getUser().getAvatarUrl() : null);
+            postData.put("workspacePicture", pics.toArray());
+            postData.put("createdAt", pendingJobPost.getCreatedAt());
+
+            response.put("status", "success");
+            response.put("post", postData);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ResponseEntity<>(Map.of("status", "error", "message", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

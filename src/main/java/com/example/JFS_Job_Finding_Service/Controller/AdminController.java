@@ -1,11 +1,13 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
 import com.example.JFS_Job_Finding_Service.DTO.Auth.reviewEmployerDTO;
+import com.example.JFS_Job_Finding_Service.DTO.Employer.ReviewEmployerDTO;
 import com.example.JFS_Job_Finding_Service.Services.AdminService;
 import com.example.JFS_Job_Finding_Service.Services.UserService;
 import com.example.JFS_Job_Finding_Service.models.User;
 import com.example.JFS_Job_Finding_Service.repository.UserRepository;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,16 +47,29 @@ public class AdminController {
     public ResponseEntity<?> deleteUser(@RequestHeader HttpHeaders headers, @RequestParam("userId") Long userId) {
         return adminService.deleteUser(headers.getFirst("token"), userId);
     }
-    @PostMapping("/acceptEmployer")
-    public ResponseEntity<?>  acceptEmployer(@RequestHeader HttpHeaders headers, @RequestBody reviewEmployerDTO reviewEmployerDTO) {
-        String token = headers.getFirst("token");
-        if(token==null) return ResponseEntity.badRequest().build();
-        return userService.acceptEmployerRegistration(token, reviewEmployerDTO);
+    // ================= ADMIN: EMPLOYER REQUEST MANAGEMENT =================
+
+    @GetMapping("/employer-requests")
+    @Operation(summary = "Get all employer verification requests (Admin only)")
+    public ResponseEntity<?> getAllEmployerRequests(@RequestHeader("token") String token) {
+        return userService.getAllEmployerRequests(token);
     }
-    @PostMapping("/rejectEmployer")
-    public ResponseEntity<?>  rejectEmployer(@RequestHeader HttpHeaders headers, @RequestBody reviewEmployerDTO reviewEmployerDTO) {
-        String token = headers.getFirst("token");
-        if(token==null) return ResponseEntity.badRequest().build();
-        return userService.rejectEmployerRegistration(token, reviewEmployerDTO);
+
+    @PostMapping("/approve-employer")
+    @Operation(summary = "Approve an employer verification request (Admin only)")
+    public ResponseEntity<?> approveEmployerRequest(
+            @RequestHeader("token") String token,
+            @RequestBody ReviewEmployerDTO dto
+    ) {
+        return userService.acceptEmployerRegistration(token, dto);
+    }
+
+    @PostMapping("/reject-employer")
+    @Operation(summary = "Reject an employer verification request (Admin only)")
+    public ResponseEntity<?> rejectEmployerRequest(
+            @RequestHeader("token") String token,
+            @RequestBody ReviewEmployerDTO dto
+    ) {
+        return userService.rejectEmployerRegistration(token, dto);
     }
 }

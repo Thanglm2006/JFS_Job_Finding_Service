@@ -64,9 +64,6 @@ public class Employer {
     @Column(name = "status")
     private VerificationStatus status = VerificationStatus.PENDING;
 
-    @Column(name = "rejection_reason")
-    private String rejectionReason;
-
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
 

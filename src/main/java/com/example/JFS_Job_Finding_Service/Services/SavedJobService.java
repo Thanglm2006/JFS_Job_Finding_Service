@@ -130,7 +130,7 @@ public class SavedJobService {
             Map<String, Object> postData = new HashMap<>();
             postData.put("id", jobPost.getId());
             postData.put("title", jobPost.getTitle());
-            postData.put("description", jobPost.getDescription());
+            postData.put("description", jobPost.getJobDescription());
             postData.put("createdAt", jobPost.getCreatedAt());
             postData.put("savedAt", savedJob.getSavedAt());
             postData.put("isSaved", true);

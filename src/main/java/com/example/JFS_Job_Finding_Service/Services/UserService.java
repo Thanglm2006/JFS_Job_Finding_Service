@@ -1,14 +1,13 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
-import com.example.JFS_Job_Finding_Service.DTO.EmployerUpdateDTO;
+import com.example.JFS_Job_Finding_Service.DTO.Employer.EmployerRequestInfoDTO;
+import com.example.JFS_Job_Finding_Service.DTO.Employer.EmployerUpdateDTO;
+import com.example.JFS_Job_Finding_Service.DTO.Employer.ReviewEmployerDTO;
 import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.models.Enum.EmployerType;
 import com.example.JFS_Job_Finding_Service.models.Enum.VerificationStatus;
-import com.example.JFS_Job_Finding_Service.repository.ApplicantRepository;
-import com.example.JFS_Job_Finding_Service.repository.EmployerRepository;
-import com.example.JFS_Job_Finding_Service.repository.NotificationRepository;
-import com.example.JFS_Job_Finding_Service.repository.UserRepository;
+import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.security.PasswordConfig;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import jakarta.mail.MessagingException;
@@ -30,6 +29,7 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +50,7 @@ public class UserService {
 
     private static final int EXPIRATION_MINUTES = 5;
     private final NotificationRepository notificationRepository;
+    private final EmployerRequestRepository employerRequestRepository;
 
     private String generateVerificationCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -125,7 +126,19 @@ public class UserService {
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
         response.put("status", "success");
         response.put("token", token);
-        response.put("user", user);
+        response.put("userId", user.getId());
+        if(requiredRole.equalsIgnoreCase("Employer")) {
+            Employer employer =  employerRepository.findByUser(user).get();
+            response.put("employerId", employer.getId());
+        }
+        else{
+            Applicant applicant =  applicantRepository.findByUser(user).get();
+            response.put("applicantId", applicant.getId());
+        }
+        response.put("email", user.getEmail());
+        response.put("role", user.getRole());
+        response.put("fullName", user.getFullName());
+        response.put("avatarUrl", user.getAvatarUrl());
 
         if ("Employer".equals(requiredRole)) {
             employerRepository.findByUser(user).ifPresent(e -> response.put("employer", e));
@@ -173,7 +186,8 @@ public class UserService {
         return processPendingRegistration(user, employer, null);
     }
 
-    public ResponseEntity<?> acceptEmployerRegistration(String token, reviewEmployerDTO dto) {
+    // Using DTO for review
+    public ResponseEntity<?> acceptEmployerRegistration(String token, ReviewEmployerDTO dto) {
         Map<String, Object> response = new HashMap<>();
         if(!jwtUtil.checkPermission(token,"admin") && !jwtUtil.validateToken(token)){
             response.put("error", "Invalid access");
@@ -185,8 +199,18 @@ public class UserService {
             response.put("message", "Không tìm thấy thông tin nhà tuyển dụng.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
+        if(employer.getStatus() == VerificationStatus.VERIFIED) {
+            return ResponseEntity.ok().body(Map.of("message","đã phê duyệt người này trước đó rồi!"));
+        }
         employer.setStatus(VerificationStatus.VERIFIED);
+        employer.setVerifiedAt(LocalDateTime.now());
         employerRepository.save(employer);
+
+        EmployerRequest request = employerRequestRepository.findById(dto.getRequestId()).orElse(null);
+        if (request != null) {
+            request.setStatus(VerificationStatus.VERIFIED);
+            employerRequestRepository.save(request);
+        }
 
         Notification notification = new Notification();
         notification.setUser(employer.getUser());
@@ -198,7 +222,8 @@ public class UserService {
         return ResponseEntity.ok(Map.of("message", "Đã phê duyệt tài khoản nhà tuyển dụng thành công."));
     }
 
-    public ResponseEntity<?> rejectEmployerRegistration(String token, reviewEmployerDTO dto) {
+    // Using DTO for rejection
+    public ResponseEntity<?> rejectEmployerRegistration(String token, ReviewEmployerDTO dto) {
         Map<String, Object> response = new HashMap<>();
         if(!jwtUtil.checkPermission(token,"admin") && !jwtUtil.validateToken(token)){
             response.put("error", "Invalid access");
@@ -210,9 +235,19 @@ public class UserService {
             response.put("message", "Không tìm thấy thông tin nhà tuyển dụng.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
+        if(employer.getStatus() == VerificationStatus.VERIFIED) {
+            return ResponseEntity.ok().body(Map.of("message","đã phê duyệt người này trước đó rồi!"));
+        }
         employer.setStatus(VerificationStatus.REJECTED);
-        employer.setRejectionReason(dto.getReason());
+
         employerRepository.save(employer);
+
+        EmployerRequest request = employerRequestRepository.findById(dto.getRequestId()).orElse(null);
+        if (request != null) {
+            request.setStatus(VerificationStatus.REJECTED);
+            request.setRejectionReason(dto.getReason());
+            employerRequestRepository.save(request);
+        }
 
         Notification notification = new Notification();
         notification.setUser(employer.getUser());
@@ -425,7 +460,7 @@ public class UserService {
         response.put("address", user.getAddress());
         response.put("gender", user.getGender());
         response.put("date_of_birth", user.getDateOfBirth());
-        response.put("avatar", user.getAvatarUrl());
+        response.put("avatarUrl", user.getAvatarUrl());
         response.put("createdAt", user.getCreatedAt());
         response.put("email", user.getEmail());
         response.put("fullName", user.getFullName());
@@ -599,21 +634,6 @@ public class UserService {
         }
     }
 
-    public ResponseEntity<?> UpdateResume(String token, String email, Map<String, Object> resume) {
-        if (!tokenService.validateToken(token, email)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Phiên làm việc không hợp lệ."));
-        }
-        User user = userRepository.findByEmail(email).orElse(null);
-        if (user == null) return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy người dùng."));
-
-        Applicant applicant = applicantRepository.findByUser(user).orElse(null);
-        if (applicant == null) return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy hồ sơ ứng viên tương ứng."));
-
-        applicant.setResume(resume);
-        applicantRepository.save(applicant);
-
-        return ResponseEntity.ok(Map.of("status", "success", "message", "Cập nhật hồ sơ/CV thành công."));
-    }
 
     public ResponseEntity<?> checkEmail(String email) {
         if (userRepository.findByEmail(email).isPresent()) {
@@ -623,16 +643,6 @@ public class UserService {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         return ResponseEntity.ok(Map.of("status", "success", "message", "Email có thể sử dụng."));
-    }
-
-    public String updatePassword(String email, String oldPass, String password, String confirmPass) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Người dùng không tồn tại."));
-        if (!passwordEncoder.matches(oldPass, user.getPassword())) throw new RuntimeException("Mật khẩu hiện tại không chính xác.");
-        if (!password.equals(confirmPass)) throw new RuntimeException("Mật khẩu mới và xác nhận mật khẩu không khớp.");
-
-        user.setPassword(passwordEncoder.encode(password));
-        userRepository.save(user);
-        return "success";
     }
 
     public String deleteUser(long id) {
@@ -708,6 +718,114 @@ public class UserService {
         return ResponseEntity.ok(Map.of("status", "success", "message", "Mật khẩu của bạn đã được thay đổi thành công."));
     }
 
+    @Transactional
+    public ResponseEntity<?> requestRegisterEmployer(String token, EmployerUpdateDTO dto) {
+        String email = jwtUtil.extractEmail(token);
+        if (!tokenService.validateToken(token, email)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Phiên làm việc không hợp lệ."));
+        }
+
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Không tìm thấy tài khoản người dùng."));
+        }
+
+        Employer employer = employerRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ nhà tuyển dụng."));
+
+        try {
+            if (dto.getBusinessLicense() != null && !dto.getBusinessLicense().isEmpty()) {
+                String licenseUrl = s3Service.uploadFile(dto.getBusinessLicense());
+                employer.setBusinessLicenseUrl(licenseUrl);
+            }
+
+            if (dto.getIdCardFront() != null && !dto.getIdCardFront().isEmpty()) {
+                String idCardUrl = s3Service.uploadFile(dto.getIdCardFront());
+                employer.setIdCardFront(idCardUrl);
+            }
+
+            if (dto.getFullName() != null) user.setFullName(dto.getFullName());
+            if (dto.getPhoneNumber() != null) user.setPhone(dto.getPhoneNumber());
+            if (dto.getAddress() != null) user.setAddress(dto.getAddress());
+            if (dto.getGender() != null) user.setGender(dto.getGender());
+            if (dto.getDateOfBirth() != null) user.setDateOfBirth(dto.getDateOfBirth());
+
+            if (dto.getOrgName() != null) employer.setOrgName(dto.getOrgName());
+            if (dto.getTaxCode() != null) employer.setTaxCode(dto.getTaxCode());
+            if (dto.getBusinessCode() != null) employer.setBusinessCode(dto.getBusinessCode());
+            if (dto.getCompanyWebsite() != null) employer.setCompanyWebsite(dto.getCompanyWebsite());
+            if (dto.getCompanyEmail() != null) employer.setCompanyEmail(dto.getCompanyEmail());
+            if (dto.getHeadquartersAddress() != null) employer.setHeadquartersAddress(dto.getHeadquartersAddress());
+            if (dto.getIdCardNumber() != null) employer.setIdCardNumber(dto.getIdCardNumber());
+
+            if (dto.getEmployerType() != null) {
+                try {
+                    employer.setType(EmployerType.valueOf(dto.getEmployerType()));
+                } catch (IllegalArgumentException e) {
+                    employer.setType(EmployerType.Other);
+                    employer.setCustomType(dto.getEmployerType());
+                }
+            }
+
+            if (dto.getCustomType() != null) employer.setCustomType(dto.getCustomType());
+
+            userRepository.save(user);
+            employerRepository.save(employer);
+
+            EmployerRequest request = new EmployerRequest();
+            request.setEmployer(employer);
+            request.setStatus(VerificationStatus.PENDING);
+            employerRequestRepository.save(request);
+
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Gửi yêu cầu xác minh doanh nghiệp thành công. Vui lòng chờ phê duyệt."));
+
+        } catch (IOException e) {
+            log.error("S3 Upload error", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi tải tài liệu: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("Verification Request failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi xử lý yêu cầu: " + e.getMessage()));
+        }
+    }
+    public ResponseEntity<?> getAllEmployerRequests(String token) {
+        if (!jwtUtil.checkPermission(token, "admin") && !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized access."));
+        }
+
+        List<EmployerRequest> requests = employerRequestRepository.findAllByOrderByCreatedAtDesc();
+
+        List<EmployerRequestInfoDTO> dtos = requests.stream().map(req -> {
+            Employer emp = req.getEmployer();
+            User u = emp.getUser();
+
+            return EmployerRequestInfoDTO.builder()
+                    .requestId(req.getId())
+                    .employerId(emp.getId())
+                    .orgName(emp.getOrgName())
+                    .fullName(u.getFullName())
+                    .customType(emp.getCustomType())
+                    .headquartersAddress(emp.getHeadquartersAddress())
+                    .email(u.getEmail())
+                    .phone(u.getPhone())
+                    .companyWebsite(emp.getCompanyWebsite())
+                    .businessCode(emp.getBusinessCode())
+                    .companyEmail(emp.getCompanyEmail())
+                    .gender(u.getGender())
+                    .employerType(emp.getType().toString())
+                    .status(req.getStatus())
+                    .createdAt(req.getCreatedAt())
+                    .taxCode(emp.getTaxCode())
+                    .businessLicenseUrl(emp.getBusinessLicenseUrl())
+                    .idCardNumber(emp.getIdCardNumber())
+                    .idCardFrontUrl(emp.getIdCardFront())
+                    .build();
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
+    }
+
     private static class VerificationInfo {
         @lombok.Getter
         private final String code;
@@ -722,4 +840,5 @@ public class UserService {
             return System.currentTimeMillis() > expiryTimeMillis;
         }
     }
+
 }

@@ -1,4 +1,4 @@
-package com.example.JFS_Job_Finding_Service.DTO;
+package com.example.JFS_Job_Finding_Service.DTO.Employer;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

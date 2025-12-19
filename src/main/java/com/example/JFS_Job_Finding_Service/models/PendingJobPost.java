@@ -1,5 +1,8 @@
 package com.example.JFS_Job_Finding_Service.models;
+import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
 import jakarta.persistence.*;
+
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 
@@ -26,26 +29,44 @@ public class PendingJobPost {
     @JoinColumn(name = "employer_id", referencedColumnName = "id", nullable = false)
     private Employer employer;
 
-    @JdbcTypeCode(SqlTypes.JSON)  // ✅ Use correct annotation for JSONB in Hibernate 6
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "job_description", columnDefinition = "jsonb", nullable = false)
+    private Map<String, Object> jobDescription;
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
-    private Map<String, Object> description;
-    @Column(nullable = true, name="workspace_picture")
+    private Map<String, Object> requirements;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb", nullable = false)
+    private Map<String, Object> responsibilities;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb", nullable = false)
+    private Map<String, Object> advantages;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, Object> extension;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "type", columnDefinition = "job_type", nullable = false)
+    private JobType type;
+    @Column(nullable = true, name = "workspace_picture")
     private String workspacePicture;
     @Column(nullable = false)
     @JdbcTypeCode(SqlTypes.ARRAY)
     private String[] positions;
-    @Column(nullable = false)
-    private Instant createdAt=Instant.now();
-    public PendingJobPost(String title, Employer employer, Map<String, Object> description) {
-        this.title = title;
-        this.employer = employer;
-        this.description = description;
-    }
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(columnDefinition = "text[]", nullable = false)
+    private String[] addresses;
+    @Column(name = "salary_min")
+    private BigDecimal salaryMin;
 
-    public PendingJobPost(String title, Employer employer, Map<String, Object> description, String workspacePicture) {
-        this.title = title;
-        this.employer = employer;
-        this.description = description;
-        this.workspacePicture = workspacePicture;
-    }
+    @Column(name = "salary_max")
+    private BigDecimal salaryMax;
+    @Column(nullable = false)
+    private Instant createdAt = Instant.now();
+
 }

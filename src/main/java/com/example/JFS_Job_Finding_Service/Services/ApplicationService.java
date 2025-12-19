@@ -199,7 +199,7 @@ public class ApplicationService {
                 postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
                 postData.put("isSaved", isSaved);
                 postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
-                postData.put("description", jobPost.getDescription());
+                postData.put("description", jobPost.getJobDescription());
                 postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
                 postData.put("workspacePicture", pics.toArray());
                 postData.put("createdAt", jobPost.getCreatedAt());
@@ -249,7 +249,7 @@ public class ApplicationService {
             applicationData.put("applicationId", application.getId());
             applicationData.put("jobId", jobPost.getId());
             applicationData.put("jobTitle", jobPost.getTitle());
-            applicationData.put("jobDescription", jobPost.getDescription());
+            applicationData.put("jobDescription", jobPost.getJobDescription());
             applicationData.put("jobEmployerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
             applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown");
             applicationData.put("employerAvatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);

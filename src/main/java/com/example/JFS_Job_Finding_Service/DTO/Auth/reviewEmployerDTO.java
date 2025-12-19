@@ -5,5 +5,6 @@ import lombok.Data;
 @Data
 public class reviewEmployerDTO {
     private String employerId;
+    private long requestId;
     private String reason;
 }
