@@ -51,19 +51,19 @@ public class PostController {
     @PostMapping(value = "/updatePendingPost", consumes = "multipart/form-data")
     public ResponseEntity<?> updatePending(
             @RequestHeader("token") String token,
-            @RequestParam long pendingId,
+            @RequestParam("pendingID") long pendingId,
             @ModelAttribute PostingRequest postingRequest
     ) {
         return pendingJobPostService.updatePendingPost(token,pendingId, postingRequest);
     }
     @Operation(summary = "update a post", description = "Post with title, description fields (JSON strings), and files.")
-    @PostMapping(value = "/updatePendingPost", consumes = "multipart/form-data")
+    @PostMapping(value = "/updatePost", consumes = "multipart/form-data")
     public ResponseEntity<?> updatePost(
             @RequestHeader("token") String token,
-            @RequestParam long pendingId,
+            @RequestParam("postId") String postId,
             @ModelAttribute PostingRequest postingRequest
     ) {
-        return pendingJobPostService.updatePendingPost(token,pendingId, postingRequest);
+        return postService.updatePost(token,postId, postingRequest);
     }
     @GetMapping("/getSomePendingPosts")
     @Operation(summary = "Get list of pending posts (Simplified View)", description = "Select 10 pending posts per time, only admin/employer")
