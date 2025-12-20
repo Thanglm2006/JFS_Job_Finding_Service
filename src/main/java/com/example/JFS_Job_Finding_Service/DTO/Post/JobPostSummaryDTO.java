@@ -12,7 +12,7 @@ public class JobPostSummaryDTO {
     private String salary;      // e.g., "1000 - 2000" or "Thương lượng"
     private String orgName;
     private String jobType;
-    private String workspacePicture;
     private Instant createdAt;
     private boolean isSaved;
+    private boolean isApplied;
 }

@@ -1,9 +1,16 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
+import com.example.JFS_Job_Finding_Service.DTO.Post.JobPostDetailDTO;
+import com.example.JFS_Job_Finding_Service.DTO.Post.JobPostSummaryDTO;
 import com.example.JFS_Job_Finding_Service.DTO.Post.JobSearchRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.*;
+import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,9 +19,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class PostService {
@@ -34,262 +43,312 @@ public class PostService {
     private NotificationRepository notificationRepository;
     @Autowired
     private TokenService tokenService;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
+    // --- Helpers ---
 
     private String formatSalary(BigDecimal min, BigDecimal max) {
-        if (min != null && max != null) {
-            return min.toPlainString() + " - " + max.toPlainString();
-        }
-        return "Thương lượng";
+        return (min != null && max != null) ? min.toPlainString() + " - " + max.toPlainString() : "Thương lượng";
     }
 
-    public ResponseEntity<?> getSomePosts(String token, int page, int size) {
-        Map<String, Object> response = new HashMap<>();
+    private Map<String, Map<String, Object>> parseJobData(PostingRequest request) throws JsonProcessingException {
+        Map<String, Map<String, Object>> parsedData = new HashMap<>();
+        parsedData.put("description", objectMapper.readValue(request.getDescription(), new TypeReference<>() {}));
+        parsedData.put("requirements", objectMapper.readValue(request.getRequirements(), new TypeReference<>() {}));
+        parsedData.put("responsibilities", objectMapper.readValue(request.getResponsibilities(), new TypeReference<>() {}));
+        parsedData.put("advantages", objectMapper.readValue(request.getAdvantages(), new TypeReference<>() {}));
 
-        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            response.put("status", "fail");
-            response.put("message", "Bạn không có quyền truy cập chức năng này.");
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        Map<String, Object> extensionMap = new HashMap<>();
+        if (request.getExtension() != null && !request.getExtension().isEmpty()) {
+            extensionMap = objectMapper.readValue(request.getExtension(), new TypeReference<>() {});
         }
+        parsedData.put("extension", extensionMap);
+        return parsedData;
+    }
+
+    // Reuse scam check logic for updates to prevent malicious edits
+    private Double performScamCheck(String title, Map<String, Object> descriptionMap) {
+        try {
+            String rawDesc = descriptionMap.toString();
+            String processedDesc = Arrays.stream(rawDesc.replace("{", "").replace("}", "").split(", "))
+                    .map(part -> {
+                        int idx = part.indexOf("=");
+                        return (idx != -1) ? part.substring(idx + 1).trim() : part.trim();
+                    })
+                    .collect(Collectors.joining(". "));
+
+            String textToCheck = title + " . " + processedDesc;
+            String apiUrl = "http://host.docker.internal:8000/predict";
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("text", textToCheck);
+
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<Map> apiResponse = restTemplate.postForEntity(apiUrl, requestBody, Map.class);
+
+            if (apiResponse.getBody() != null && apiResponse.getBody().containsKey("scores")) {
+                Map<String, Double> scores = (Map<String, Double>) apiResponse.getBody().get("scores");
+                return scores.get("scam");
+            }
+        } catch (Exception e) {
+            // Ignore if service down
+        }
+        return 0.0;
+    }
+
+    private JobPostSummaryDTO mapToSummaryDTO(JobPost jobPost, Applicant applicant) {
+        boolean isSaved = false;
+        boolean isApplied = false;
+        if (applicant != null) {
+            isSaved = !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
+            isApplied = applicationRepository.findByApplicant(applicant)
+                    .stream().anyMatch(app -> app.getJob().getId().equals(jobPost.getId()));
+        }
+        return JobPostSummaryDTO.builder()
+                .id(jobPost.getId())
+                .title(jobPost.getTitle())
+                .orgName(jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown")
+                .jobType(String.valueOf(jobPost.getType()))
+                .salary(formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()))
+                .createdAt(jobPost.getCreatedAt())
+                .isSaved(isSaved)
+                .isApplied(isApplied)
+                .build();
+    }
+
+    // --- Main Methods ---
+
+    public ResponseEntity<?> getSomePosts(String token, int page, int size) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+        }
+        Applicant applicant = jwtUtil.getApplicant(token);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<JobPost> jobPostsPage = jobPostRepository.findAll(pageable);
 
-        // Map to simplified structure
-        List<Map<String, Object>> posts = jobPostsPage.getContent().stream().map(jobPost -> {
-            Map<String, Object> postData = new HashMap<>();
-            postData.put("id", jobPost.getId());
-            postData.put("title", jobPost.getTitle());
-            postData.put("orgName", jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown");
-            postData.put("salary", formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()));
-            postData.put("type", jobPost.getType());
-            return postData;
-        }).toList();
+        List<JobPostSummaryDTO> posts = jobPostsPage.getContent().stream()
+                .map(post -> mapToSummaryDTO(post, applicant))
+                .toList();
 
+        Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
-        response.put("message", "Lấy danh sách bài đăng thành công.");
         response.put("posts", posts);
         response.put("totalPages", jobPostsPage.getTotalPages());
         response.put("currentPage", jobPostsPage.getNumber());
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 
-    // Updated to use DTO and single address search
     public ResponseEntity<?> fullTextSearchPosts(String token, JobSearchRequest searchDTO) {
-        Map<String, Object> response = new HashMap<>();
-
         if (!tokenService.validateToken(token)) {
-            response.put("status", "fail");
-            response.put("message", "Bạn không có quyền truy cập.");
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
         }
-
         Applicant applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
-            response.put("status", "fail");
-            response.put("message", "Tài khoản của bạn không phải là ứng viên.");
-            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Not an applicant"));
         }
-        if (searchDTO.getType() != null && searchDTO.getType().isEmpty()) {
-            searchDTO.setType(null);
-        }
+
+        if (searchDTO.getType() != null && searchDTO.getType().isEmpty()) searchDTO.setType(null);
+
         List<JobPost> jobPosts = jobPostRepository.searchWithPGroonga(
-                searchDTO.getKeyword(),
-                searchDTO.getType(),
-                searchDTO.getAddress(),
-                searchDTO.getMinSalary(),
-                searchDTO.getMaxSalary(),
-                searchDTO.getLimit(),
-                searchDTO.getOffset()
+                searchDTO.getKeyword(), searchDTO.getType(), searchDTO.getAddress(),
+                searchDTO.getMinSalary(), searchDTO.getMaxSalary(),
+                searchDTO.getLimit(), searchDTO.getOffset()
         );
 
-        List<Map<String, Object>> posts = jobPosts.stream().map(jobPost -> {
-            Map<String, Object> postData = new HashMap<>();
-            postData.put("id", jobPost.getId());
-            postData.put("title", jobPost.getTitle());
-            postData.put("orgName", jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown");
-            postData.put("salary", formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()));
-            postData.put("type", jobPost.getType());
-            return postData;
-        }).toList();
+        List<JobPostSummaryDTO> posts = jobPosts.stream()
+                .map(post -> mapToSummaryDTO(post, applicant))
+                .toList();
 
-        response.put("status", "success");
-        response.put("message", "Kết quả tìm kiếm phù hợp.");
-        response.put("posts", posts);
-        response.put("totalResults", posts.size());
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
     }
 
     public ResponseEntity<?> getSomePostOfEmployer(String token, int page, int size) {
-        Map<String, Object> response = new HashMap<>();
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            response.put("status", "fail");
-            response.put("message", "Bạn không có quyền truy cập.");
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail"));
         }
         Employer employer = jwtUtil.getEmployer(token);
         if (employer == null) {
-            response.put("status", "fail");
-            response.put("message", "Tài khoản của bạn không phải là nhà tuyển dụng.");
-            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail"));
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<JobPost> jobPostsPage = jobPostRepository.findByEmployer(employer, pageable);
 
-        List<Map<String, Object>> posts = jobPostsPage.getContent().stream().map(jobPost -> {
-            Map<String, Object> postData = new HashMap<>();
-            postData.put("id", jobPost.getId());
-            postData.put("title", jobPost.getTitle());
-            postData.put("orgName", employer.getOrgName());
-            postData.put("salary", formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()));
-            postData.put("type", jobPost.getType());
-            return postData;
-        }).toList();
+        List<JobPostSummaryDTO> posts = jobPostsPage.getContent().stream()
+                .map(post -> mapToSummaryDTO(post, null))
+                .toList();
 
+        Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
-        response.put("message", "Lấy danh sách bài đăng thành công.");
         response.put("posts", posts);
         response.put("totalPages", jobPostsPage.getTotalPages());
         response.put("currentPage", jobPostsPage.getNumber());
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 
     public ResponseEntity<?> getJobPostDetail(String token, String postId) {
-        Map<String, Object> response = new HashMap<>();
-
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return new ResponseEntity<>(Map.of("status", "fail", "message", "Unauthorized"), HttpStatus.UNAUTHORIZED);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
         }
 
         JobPost jobPost = jobPostRepository.findById(postId).orElse(null);
-        if (jobPost == null) {
-            response.put("status", "fail");
-            response.put("message", "Bài đăng không tồn tại.");
-            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-        }
+        if (jobPost == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", "fail"));
 
         Applicant applicant = jwtUtil.getApplicant(token);
-
         try {
-            String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown";
-
-            // Image handling
-            List<ImageFolders> folder = List.of();
-            List<String> pics = new ArrayList<>();
-            if (jobPost.getWorkspacePicture() != null) {
-                folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
-            }
-            for (ImageFolders imageFolder : folder) {
-                if (imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())) {
-                    pics.add(imageFolder.getFileName());
-                }
-            }
-
             boolean isSaved = false;
             boolean isApplied = false;
             if (applicant != null) {
                 isSaved = !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
                 isApplied = applicationRepository.findByApplicant(applicant)
-                        .stream()
-                        .anyMatch(application -> application.getJob().getId().equals(jobPost.getId()));
+                        .stream().anyMatch(app -> app.getJob().getId().equals(jobPost.getId()));
             }
-            int totalSaved = savedJobRepository.countByJob(jobPost);
 
-            Map<String, Object> postData = new HashMap<>();
-            postData.put("id", jobPost.getId());
-            postData.put("title", jobPost.getTitle());
-            postData.put("employerName", employerName);
-            postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
-            postData.put("isSaved", isSaved);
-            postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
-            postData.put("description", jobPost.getJobDescription());
-            postData.put("requirements", jobPost.getRequirements());
-            postData.put("responsibilities", jobPost.getResponsibilities());
-            postData.put("advantages", jobPost.getAdvantages());
-            postData.put("extension", jobPost.getExtension());
-            postData.put("type", jobPost.getType());
-            postData.put("addresses", jobPost.getAddresses());
-            postData.put("positions", jobPost.getPositions());
-            postData.put("salaryMin", jobPost.getSalaryMin());
-            postData.put("salaryMax", jobPost.getSalaryMax());
-            postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
-            postData.put("workspacePicture", pics.toArray());
-            postData.put("createdAt", jobPost.getCreatedAt());
-            postData.put("totalSaved", totalSaved);
-            postData.put("isApplied", isApplied);
+            List<String> workSpacePictures = new ArrayList<>();
+            if (jobPost.getWorkspacePicture() != null) {
+                imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture())
+                        .stream().filter(img -> img.getFolderName().equals(jobPost.getWorkspacePicture()))
+                        .forEach(img -> workSpacePictures.add(img.getFileName()));
+            }
 
-            response.put("status", "success");
-            response.put("post", postData);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            JobPostDetailDTO postData = JobPostDetailDTO.builder()
+                    .id(jobPost.getId())
+                    .title(jobPost.getTitle())
+                    .employerId(jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null)
+                    .orgName(jobPost.getEmployer().getOrgName() != null ? jobPost.getEmployer().getOrgName() : jobPost.getEmployer().getUser().getFullName())
+                    .addresses(jobPost.getAddresses())
+                    .jobType(String.valueOf(jobPost.getType()))
+                    .advantages(jobPost.getAdvantages())
+                    .isSaved(isSaved)
+                    .isApplied(isApplied)
+                    .createdAt(jobPost.getCreatedAt())
+                    .description(jobPost.getJobDescription())
+                    .orgAvatar(jobPost.getEmployer().getUser().getAvatarUrl())
+                    .positions(jobPost.getPositions())
+                    .requirements(jobPost.getRequirements())
+                    .extension(jobPost.getExtension())
+                    .responsibilities(jobPost.getResponsibilities())
+                    .salaryMin(jobPost.getSalaryMin())
+                    .salaryMax(jobPost.getSalaryMax())
+                    .workspacePictures(workSpacePictures)
+                    .build();
+
+            return ResponseEntity.ok(Map.of("status", "success", "post", postData));
         } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(Map.of("status", "error", "message", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    public ResponseEntity<?> updatePost(String token, String postId, PostingRequest request) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+        }
+        Employer currentEmployer = jwtUtil.getEmployer(token);
+        if (currentEmployer == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Permission denied"));
+        }
+
+        JobPost jobPost = jobPostRepository.findById(postId).orElse(null);
+        if (jobPost == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", "fail", "message", "Post not found"));
+        }
+        if (!jobPost.getEmployer().getId().equals(currentEmployer.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Permission denied"));
+        }
+
+        try {
+            Map<String, Map<String, Object>> jsonData = parseJobData(request);
+
+            // Re-check for scams on update
+            Double scamScore = performScamCheck(request.getTitle(), jsonData.get("description"));
+            if (scamScore > 0.7) {
+                return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(Map.of("status", "fail", "message", "Suspicious content detected"));
+            }
+
+            if (request.getFiles() != null && request.getFiles().length > 0) {
+                String folderNameKey = request.getTitle().replaceAll("\\s+", "_") + "_" + System.currentTimeMillis();
+                String newPics = cloudinaryService.uploadFiles(request.getFiles(), folderNameKey);
+                jobPost.setWorkspacePicture(newPics);
+            }
+
+            jobPost.setTitle(request.getTitle());
+            jobPost.setPositions(request.getPositions());
+            jobPost.setAddresses(request.getAddresses());
+            jobPost.setSalaryMin(request.getSalaryMin());
+            jobPost.setSalaryMax(request.getSalaryMax());
+            try {
+                jobPost.setType(JobType.valueOf(request.getType()));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Invalid Job Type"));
+            }
+
+            jobPost.setJobDescription(jsonData.get("description"));
+            jobPost.setRequirements(jsonData.get("requirements"));
+            jobPost.setResponsibilities(jsonData.get("responsibilities"));
+            jobPost.setAdvantages(jsonData.get("advantages"));
+            jobPost.setExtension(jsonData.get("extension"));
+
+            jobPostRepository.save(jobPost);
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Post updated successfully", "postId", jobPost.getId()));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", "fail", "message", e.getMessage()));
         }
     }
 
     public ResponseEntity<?> deletePost(String token, String postId) {
-        Map<String, Object> response = new HashMap<>();
-        if (!jwtUtil.checkPermission(token, "Admin") &&
-                !jwtUtil.checkPermission(token, "Employer")) {
-            response.put("status", "fail");
-            response.put("message", "Bạn không có quyền xóa bài đăng này.");
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        if (!jwtUtil.checkPermission(token, "Admin") && !jwtUtil.checkPermission(token, "Employer")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
         }
         JobPost jobPost = jobPostRepository.findById(postId).orElse(null);
-        if (jobPost == null) {
-            response.put("status", "fail");
-            response.put("message", "Bài đăng không tồn tại.");
-            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-        }
+        if (jobPost == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", "fail"));
+
         jobPostRepository.delete(jobPost);
         savedJobRepository.deleteAll(savedJobRepository.findByJob(jobPost));
+
         Notification notification = new Notification();
         notification.setUser(jobPost.getEmployer().getUser());
-        notification.setMessage("Bài đăng với tiêu đề \"" + jobPost.getTitle() + "\" đã được xóa khỏi hệ thống.");
+        notification.setMessage("Bài đăng \"" + jobPost.getTitle() + "\" đã được xóa.");
         notification.setRead(false);
         notificationRepository.save(notification);
-        response.put("status", "success");
-        response.put("message", "Đã xóa bài đăng thành công.");
-        return new ResponseEntity<>(response, HttpStatus.OK);
+
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Deleted successfully"));
     }
 
     public ResponseEntity<?> getAppliedJobs(String token, int page, int size) {
-        Map<String, Object> response = new HashMap<>();
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            response.put("status", "fail");
-            response.put("message", "Bạn không có quyền truy cập.");
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail"));
         }
         Applicant applicant = jwtUtil.getApplicant(token);
-        if (applicant == null) {
-            response.put("status", "fail");
-            response.put("message", "Tài khoản của bạn không phải là ứng viên.");
-            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
-        }
+        if (applicant == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail"));
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Application> applicationPage = applicationRepository.findByApplicant(applicant, pageable);
-        List<Map<String, Object>> applications = applicationPage.getContent().stream().map(application -> {
-            JobPost jobPost = application.getJob();
-            Map<String, Object> applicationData = new HashMap<>();
-            applicationData.put("applicationId", application.getId());
-            applicationData.put("jobId", jobPost.getId());
-            applicationData.put("jobTitle", jobPost.getTitle());
-            // Shortened info for list view
-            applicationData.put("jobCreatedAt", jobPost.getCreatedAt());
-            applicationData.put("applicantId", applicant.getId());
-            applicationData.put("jobEmployerName", jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown");
-            applicationData.put("status", application.getStatus());
-            applicationData.put("appliedAt", application.getAppliedAt());
-            applicationData.put("employerAvatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
-            return applicationData;
+
+        List<Map<String, Object>> applications = applicationPage.getContent().stream().map(app -> {
+            JobPost job = app.getJob();
+            Map<String, Object> data = new HashMap<>();
+            data.put("applicationId", app.getId());
+            data.put("jobId", job.getId());
+            data.put("jobTitle", job.getTitle());
+            data.put("jobCreatedAt", job.getCreatedAt());
+            data.put("applicantId", applicant.getId());
+            data.put("jobEmployerName", job.getEmployer() != null ? job.getEmployer().getOrgName() : "Unknown");
+            data.put("status", app.getStatus());
+            data.put("appliedAt", app.getAppliedAt());
+            data.put("employerAvatar", job.getEmployer() != null ? job.getEmployer().getUser().getAvatarUrl() : null);
+            return data;
         }).toList();
+
+        Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("applications", applications);
         response.put("totalPages", applicationPage.getTotalPages());
         response.put("currentPage", applicationPage.getNumber());
         response.put("totalApplications", applicationPage.getTotalElements());
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 }

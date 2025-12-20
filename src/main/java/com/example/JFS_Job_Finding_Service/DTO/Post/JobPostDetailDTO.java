@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.DTO.Post;
 
 import lombok.Builder;
 import lombok.Data;
+import java.util.List;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class JobPostDetailDTO {
     private BigDecimal salaryMax;
     private String salaryString; // Formatted string
 
-    private String workspacePicture;
+    private List<String> workspacePictures;
     private Instant createdAt;
 
     private boolean isSaved;

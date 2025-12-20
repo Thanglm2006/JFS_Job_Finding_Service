@@ -47,7 +47,24 @@ public class PostController {
             return ResponseEntity.status(500).body("Error deleting pending post: " + e.getMessage());
         }
     }
-
+    @Operation(summary = "update a pending post", description = "Post with title, description fields (JSON strings), and files.")
+    @PostMapping(value = "/updatePendingPost", consumes = "multipart/form-data")
+    public ResponseEntity<?> updatePending(
+            @RequestHeader("token") String token,
+            @RequestParam long pendingId,
+            @ModelAttribute PostingRequest postingRequest
+    ) {
+        return pendingJobPostService.updatePendingPost(token,pendingId, postingRequest);
+    }
+    @Operation(summary = "update a post", description = "Post with title, description fields (JSON strings), and files.")
+    @PostMapping(value = "/updatePendingPost", consumes = "multipart/form-data")
+    public ResponseEntity<?> updatePost(
+            @RequestHeader("token") String token,
+            @RequestParam long pendingId,
+            @ModelAttribute PostingRequest postingRequest
+    ) {
+        return pendingJobPostService.updatePendingPost(token,pendingId, postingRequest);
+    }
     @GetMapping("/getSomePendingPosts")
     @Operation(summary = "Get list of pending posts (Simplified View)", description = "Select 10 pending posts per time, only admin/employer")
     public ResponseEntity<?> getSomePendingPosts(

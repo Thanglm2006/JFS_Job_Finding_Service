@@ -8,7 +8,6 @@ import java.math.BigDecimal;
 public class PostingRequest {
     private String title;
 
-    // These fields are expected to be JSON Strings coming from the frontend
     private String description;
     private String requirements;
     private String responsibilities;
