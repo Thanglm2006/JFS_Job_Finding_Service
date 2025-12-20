@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class ReviewEmployerDTO {
-    private Long employerId;
+    private String employerId;
     private Long requestId;
     private String reason; // Required if rejecting
 }

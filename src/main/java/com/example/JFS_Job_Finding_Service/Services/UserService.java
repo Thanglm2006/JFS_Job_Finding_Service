@@ -207,6 +207,9 @@ public class UserService {
             request.setStatus(VerificationStatus.VERIFIED);
             employerRequestRepository.save(request);
         }
+        else{
+            return ResponseEntity.badRequest().body(Map.of("message","not found request"));
+        }
 
         Notification notification = new Notification();
         notification.setUser(employer.getUser());
