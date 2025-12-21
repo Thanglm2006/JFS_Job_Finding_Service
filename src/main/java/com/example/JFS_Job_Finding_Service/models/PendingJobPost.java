@@ -1,9 +1,11 @@
 package com.example.JFS_Job_Finding_Service.models;
 import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
+import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 import lombok.*;
@@ -55,9 +57,9 @@ public class PendingJobPost {
     private JobType type;
     @Column(nullable = true, name = "workspace_picture")
     private String workspacePicture;
-    @Column(nullable = false)
-    @JdbcTypeCode(SqlTypes.ARRAY)
-    private String[] positions;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb", nullable = false)
+    private List<JobPosition> positions;
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "text[]", nullable = false)
     private String[] addresses;

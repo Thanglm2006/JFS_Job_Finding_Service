@@ -31,13 +31,37 @@ public interface JobPostRepository extends JpaRepository<JobPost, String> {
         """, nativeQuery = true)
     List<JobPost> searchWithPGroonga(
             @Param("keyword") String keyword,
-            @Param("type") String type,       // String will be cast to enum in SQL
-            @Param("address") String address, // Single string address
+            @Param("type") String type,
+            @Param("address") String address,
             @Param("minSalary") BigDecimal minSalary,
             @Param("maxSalary") BigDecimal maxSalary,
             @Param("limit") int limit,
             @Param("offset") int offset
     );
 
+    @Query(value = "SELECT * FROM find_jobs_by_org_name(:orgName, :limit, :offset)", nativeQuery = true)
+    List<JobPost> findByOrgName(
+            @Param("orgName") String orgName,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
 
+    @Query(value = "SELECT * FROM find_jobs_by_employer_name(:employerName, :limit, :offset)", nativeQuery = true)
+    List<JobPost> findByEmployerName(
+            @Param("employerName") String employerName,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+    @Query(value = "SELECT * FROM get_employer_jobs_by_status(:employerId, :status, :limit, :offset)", nativeQuery = true)
+    List<JobPost> findJobsByEmployerAndStatus(
+            @Param("employerId") String employerId,
+            @Param("status") String status,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+    @Query(value = "SELECT count_employer_jobs_by_status(:employerId, :status)", nativeQuery = true)
+    long countJobsByEmployerAndStatus(
+            @Param("employerId") String employerId,
+            @Param("status") String status
+    );
 }

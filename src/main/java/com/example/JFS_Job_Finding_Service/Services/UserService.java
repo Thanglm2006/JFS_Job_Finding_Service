@@ -4,6 +4,7 @@ import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
 import com.example.JFS_Job_Finding_Service.DTO.Employer.EmployerRequestInfoDTO;
 import com.example.JFS_Job_Finding_Service.DTO.Employer.EmployerUpdateDTO;
 import com.example.JFS_Job_Finding_Service.DTO.Employer.ReviewEmployerDTO;
+import com.example.JFS_Job_Finding_Service.DTO.Post.JobPostSummaryDTO;
 import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.models.Enum.EmployerType;
 import com.example.JFS_Job_Finding_Service.models.Enum.VerificationStatus;
@@ -13,6 +14,7 @@ import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -51,6 +54,9 @@ public class UserService {
     private static final int EXPIRATION_MINUTES = 5;
     private final NotificationRepository notificationRepository;
     private final EmployerRequestRepository employerRequestRepository;
+    private final JobPostRepository jobPostRepository;
+    private final SavedJobRepository savedJobRepository;
+    private final ApplicationRepository applicationRepository;
 
     private String generateVerificationCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -436,25 +442,8 @@ public class UserService {
         response.put("message", "Chúc mừng! Email của bạn đã được xác minh thành công.");
         return ResponseEntity.ok(response);
     }
-
-    public ResponseEntity<?> getProfile(String token, Long userId) {
+    private Map<String,Object> getUserInfor(User user){
         Map<String, Object> response = new HashMap<>();
-        String email = jwtUtil.extractEmail(token);
-
-        if (!tokenService.validateToken(token, email)) {
-            response.put("status", "fail");
-            response.put("message", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
-        }
-
-        Optional<User> userOpt = userRepository.findById(userId);
-        if (userOpt.isEmpty()) {
-            response.put("status", "fail");
-            response.put("message", "Không tìm thấy thông tin người dùng.");
-            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-        }
-        User user = userOpt.get();
-
         response.put("phone", user.getPhone());
         response.put("address", user.getAddress());
         response.put("gender", user.getGender());
@@ -464,33 +453,126 @@ public class UserService {
         response.put("email", user.getEmail());
         response.put("fullName", user.getFullName());
         response.put("role", user.getRole());
+        return response;
+    }
+    public ResponseEntity<?> getEmployerProfile(String token, String employerId) {
+        Map<String, Object> response = new HashMap<>();
+        String email = jwtUtil.extractEmail(token);
 
-        if ("Applicant".equals(user.getRole())) {
-            Optional<Applicant> applicant = applicantRepository.findByUser(user);
-            if (applicant.isPresent()) {
-                response.put("status", "success");
-                response.put("applicantId", applicant.get().getId());
-                response.put("resume", applicant.get().getResume());
-            } else {
-                response.put("status", "fail");
-                response.put("message", "Hồ sơ ứng viên không đầy đủ.");
-            }
-        } else if ("Employer".equals(user.getRole())) {
-            Optional<Employer> employer = employerRepository.findByUser(user);
-            if (employer.isPresent()) {
-                response.put("status", "success");
-                response.put("employerId", employer.get().getId());
-                response.put("organization", employer.get().getOrgName());
-                response.put("field", employer.get().getType());
-                response.put("verificationStatus", employer.get().getStatus());
-            } else {
-                response.put("status", "fail");
-                response.put("message", "Hồ sơ nhà tuyển dụng không đầy đủ.");
-            }
+        // 1. Validate Token
+        if (!tokenService.validateToken(token, email)) {
+            response.put("status", "fail");
+            response.put("message", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
+
+        // 2. Lấy thông tin Employer
+        Optional<Employer> employerOptional = employerRepository.findById(employerId);
+        if (employerOptional.isEmpty()) {
+            response.put("status", "fail");
+            response.put("message", "Không tìm thấy thông tin người dùng.");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        Employer employer = employerOptional.get();
+
+        User currentUser = userRepository.findByEmail(email).orElse(null);
+        Applicant currentApplicant = null;
+        if (currentUser != null && "Applicant".equals(currentUser.getRole())) { // Check role nếu cần
+            currentApplicant = applicantRepository.findByUserId(currentUser.getId()).orElse(null);
+        }
+
+        User user = employer.getUser();
+        Map<String, Object> userInfor = getUserInfor(user);
+        response.putAll(userInfor);
+
+        response.put("status", "success");
+        response.put("employerId", employerId);
+        response.put("organization", employer.getOrgName());
+        response.put("field", employer.getType());
+        response.put("verificationStatus", employer.getStatus());
+
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        int limit = pageable.getPageSize();
+        int offset = (int) pageable.getOffset();
+
+        List<JobPost> openJobsList = jobPostRepository.findJobsByEmployerAndStatus(
+                employerId, "OPEN", limit, offset
+        );
+        long totalOpenJobs = jobPostRepository.countJobsByEmployerAndStatus(employerId, "OPEN");
+
+        Applicant finalApplicant = currentApplicant;
+        List<JobPostSummaryDTO> openJobDTOs = openJobsList.stream()
+                .map(post -> mapToSummaryDTO(post, finalApplicant))
+                .toList();
+
+        Page<JobPostSummaryDTO> openJobsPage = new PageImpl<>(openJobDTOs, pageable, totalOpenJobs);
+        response.put("openJobs", openJobsPage);
+
+
+        List<JobPost> closedJobsList = jobPostRepository.findJobsByEmployerAndStatus(
+                employerId, "CLOSED", limit, offset
+        );
+        long totalClosedJobs = jobPostRepository.countJobsByEmployerAndStatus(employerId, "CLOSED");
+
+        List<JobPostSummaryDTO> closedJobDTOs = closedJobsList.stream()
+                .map(post -> mapToSummaryDTO(post, finalApplicant))
+                .toList();
+
+        Page<JobPostSummaryDTO> closedJobsPage = new PageImpl<>(closedJobDTOs, pageable, totalClosedJobs);
+        response.put("closedJobs", closedJobsPage);
+
         return ResponseEntity.ok(response);
     }
+    private JobPostSummaryDTO mapToSummaryDTO(JobPost jobPost, Applicant applicant) {
+        boolean isSaved = false;
+        boolean isApplied = false;
+        if (applicant != null) {
+            isSaved = !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
+            isApplied = applicationRepository.findByApplicant(applicant)
+                    .stream().anyMatch(app -> app.getJob().getId().equals(jobPost.getId()));
+        }
+        return JobPostSummaryDTO.builder()
+                .id(jobPost.getId())
+                .title(jobPost.getTitle())
+                .orgName(jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown")
+                .jobType(String.valueOf(jobPost.getType()))
+                .salary(formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()))
+                .createdAt(jobPost.getCreatedAt())
+                .isSaved(isSaved)
+                .isApplied(isApplied)
+                .build();
+    }
+    private String formatSalary(BigDecimal min, BigDecimal max) {
+        return (min != null && max != null) ? min.toPlainString() + " - " + max.toPlainString() : "Thương lượng";
+    }
+    public ResponseEntity<?> getApplicantProfile(String token, String applicantId) {
+        Map<String, Object> response = new HashMap<>();
+        String email = jwtUtil.extractEmail(token);
 
+        if (!tokenService.validateToken(token, email)) {
+            response.put("status", "fail");
+            response.put("message", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        Optional<Applicant> applicantOptional = applicantRepository.findById(applicantId);
+        if(applicantOptional.isEmpty()) {
+
+            response.put("status", "fail");
+            response.put("message", "Không tìm thấy thông tin người dùng.");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+
+        Applicant applicant = applicantOptional.get();
+
+        User user = applicant.getUser();
+        Map<String, Object> userInfor = getUserInfor(user);
+        response.putAll(userInfor);
+
+        response.put("status", "success");
+        response.put("applicantId", applicant.getId());
+        response.put("resume", applicant.getResume());
+        return ResponseEntity.ok(response);
+    }
     public ResponseEntity<?> updateAvatar(String token, MultipartFile file) {
         Map<String, Object> response = new HashMap<>();
         String email = jwtUtil.extractEmail(token);

@@ -1,11 +1,13 @@
 package com.example.JFS_Job_Finding_Service.models;
 
 import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
+import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.util.List;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
@@ -55,9 +57,9 @@ public class JobPost {
     @Column(columnDefinition = "text[]", nullable = false)
     private String[] addresses;
 
-    @JdbcTypeCode(SqlTypes.ARRAY)
-    @Column(nullable = false, columnDefinition = "text[]")
-    private String[] positions;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb", nullable = false)
+    private List<JobPosition> positions;
 
     @Column(name = "salary_min")
     private BigDecimal salaryMin;

@@ -6,6 +6,7 @@ import com.example.JFS_Job_Finding_Service.DTO.Post.JobSearchRequest;
 import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
+import com.example.JFS_Job_Finding_Service.models.Enum.PositionStatus;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -109,6 +110,9 @@ public class PostService {
         return JobPostSummaryDTO.builder()
                 .id(jobPost.getId())
                 .title(jobPost.getTitle())
+                .employerName(jobPost.getEmployer().getUser().getFullName())
+                .employerUserId(jobPost.getEmployer().getUser().getId())
+                .employerId(jobPost.getEmployer().getId())
                 .orgName(jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown")
                 .jobType(String.valueOf(jobPost.getType()))
                 .salary(formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()))
@@ -129,7 +133,9 @@ public class PostService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<JobPost> jobPostsPage = jobPostRepository.findAll(pageable);
 
-        List<JobPostSummaryDTO> posts = jobPostsPage.getContent().stream()
+        List<JobPostSummaryDTO> posts = jobPostsPage.getContent().stream().filter(post -> post.getPositions() != null &&
+                        post.getPositions().stream()
+                                .anyMatch(pos -> PositionStatus.OPEN.equals(pos.getStatus())))
                 .map(post -> mapToSummaryDTO(post, applicant))
                 .toList();
 
@@ -158,10 +164,44 @@ public class PostService {
                 searchDTO.getLimit(), searchDTO.getOffset()
         );
 
-        List<JobPostSummaryDTO> posts = jobPosts.stream()
+        List<JobPostSummaryDTO> posts = jobPosts.stream().filter(post -> post.getPositions() != null &&
+                        post.getPositions().stream()
+                                .anyMatch(pos -> PositionStatus.OPEN.equals(pos.getStatus())))
                 .map(post -> mapToSummaryDTO(post, applicant))
                 .toList();
 
+        return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
+    }
+    public ResponseEntity<?> findByEmployerName(String token, String name, int page, int limit) {
+        if (!tokenService.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+        }
+        Applicant applicant = jwtUtil.getApplicant(token);
+        if (applicant == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Not an applicant"));
+        }
+        List<JobPost> jobPosts = jobPostRepository.findByEmployerName(name, page, limit);
+        List<JobPostSummaryDTO> posts = jobPosts.stream().filter(post -> post.getPositions() != null &&
+                        post.getPositions().stream()
+                                .anyMatch(pos -> PositionStatus.OPEN.equals(pos.getStatus())))
+                .map(post -> mapToSummaryDTO(post, applicant))
+                .toList();
+        return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
+    }
+    public ResponseEntity<?> findByOrgName(String token, String name, int page, int limit) {
+        if (!tokenService.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+        }
+        Applicant applicant = jwtUtil.getApplicant(token);
+        if (applicant == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Not an applicant"));
+        }
+        List<JobPost> jobPosts = jobPostRepository.findByOrgName(name, page, limit);
+        List<JobPostSummaryDTO> posts = jobPosts.stream().filter(post -> post.getPositions() != null &&
+                        post.getPositions().stream()
+                                .anyMatch(pos -> PositionStatus.OPEN.equals(pos.getStatus())))
+                .map(post -> mapToSummaryDTO(post, applicant))
+                .toList();
         return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
     }
 
@@ -222,6 +262,8 @@ public class PostService {
                     .addresses(jobPost.getAddresses())
                     .jobType(String.valueOf(jobPost.getType()))
                     .advantages(jobPost.getAdvantages())
+                    .employerUserId(jobPost.getEmployer().getUser().getId())
+                    .employerName(jobPost.getEmployer().getUser().getFullName())
                     .isSaved(isSaved)
                     .isApplied(isApplied)
                     .createdAt(jobPost.getCreatedAt())

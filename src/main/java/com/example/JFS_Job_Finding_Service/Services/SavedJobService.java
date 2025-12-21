@@ -56,6 +56,13 @@ public class SavedJobService {
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
         JobPost jobPost = jobPostRepository.findById(jobId).get();
+
+        if(!savedJobRepository.findByApplicantAndJob(applicant,jobPost).isEmpty()){
+            response.put("status", "fail");
+            response.put("message", "bạn đã lưu bài này rồi!");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
         SavedJob savedJob = new SavedJob(applicant, jobPost);
         savedJobRepository.save(savedJob);
 

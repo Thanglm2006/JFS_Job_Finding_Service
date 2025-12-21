@@ -1,5 +1,6 @@
 package com.example.JFS_Job_Finding_Service.DTO.Post;
 
+import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import lombok.Builder;
 import lombok.Data;
 import java.util.List;
@@ -15,7 +16,8 @@ public class JobPostDetailDTO {
     private String orgName;
     private String orgAvatar;
     private String employerId;
-
+    private long employerUserId;
+    private String employerName;
     // Detailed JSON fields
     private Map<String, Object> description;
     private Map<String, Object> requirements;
@@ -23,7 +25,7 @@ public class JobPostDetailDTO {
     private Map<String, Object> advantages;
     private Map<String, Object> extension;
 
-    private String[] positions;
+    private List<JobPosition> positions;
     private String[] addresses;
     private String jobType;
 

@@ -160,6 +160,28 @@ public class PostController {
             return ResponseEntity.status(500).body("Error finding post: " + e.getMessage());
         }
     }
+    @GetMapping("/findByEmployerName")
+    public ResponseEntity<?> findByEmployerName(  @RequestHeader HttpHeaders headers,
+                                                  @RequestParam("name") String name, @RequestParam("page") int page,
+                                                @RequestParam("limit") int limit){
+        try{
+            return postService.findByEmployerName(headers.getFirst("token"), name, page, limit);
+        }
+        catch (Exception e){
+            return ResponseEntity.status(500).body("Error fetching posts: " + e.getMessage());
+        }
+    }
+    @GetMapping("/findByOrgName")
+    public ResponseEntity<?> findByOrgName(  @RequestHeader HttpHeaders headers,
+                                                  @RequestParam("name") String name, @RequestParam("page") int page,
+                                                  @RequestParam("limit") int limit){
+        try{
+            return postService.findByOrgName(headers.getFirst("token"), name, page, limit);
+        }
+        catch (Exception e){
+            return ResponseEntity.status(500).body("Error fetching posts: " + e.getMessage());
+        }
+    }
 
     @GetMapping("/getPostDetail")
     @Operation(summary = "Get full details of an active post", description = "Returns all fields including specific descriptions")

@@ -117,7 +117,7 @@ public class PendingJobPostService {
 
         try {
             // Validation
-            if (request.getPositions() == null || request.getPositions().length == 0 || request.getAddresses() == null || request.getAddresses().length == 0) {
+            if (request.getPositions() == null || request.getPositions().isEmpty() || request.getAddresses() == null || request.getAddresses().length == 0) {
                 return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Thiếu thông tin vị trí hoặc địa chỉ."));
             }
 
@@ -353,6 +353,7 @@ public class PendingJobPostService {
             postData.put("title", pending.getTitle());
             postData.put("employerName", pending.getEmployer() != null ? pending.getEmployer().getOrgName() : "Unknown");
             postData.put("employerId", pending.getEmployer() != null ? pending.getEmployer().getId() : null);
+            postData.put("employerUserId", pending.getEmployer().getUser().getId());
             postData.put("description", pending.getJobDescription());
             postData.put("requirements", pending.getRequirements());
             postData.put("responsibilities", pending.getResponsibilities());

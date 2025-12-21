@@ -1,8 +1,11 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
+import com.example.JFS_Job_Finding_Service.DTO.Application.ApplyDTO;
 import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.DTO.Schedule;
 import com.example.JFS_Job_Finding_Service.models.Enum.ApplicationStatus;
+import com.example.JFS_Job_Finding_Service.models.Enum.PositionStatus;
+import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.checkerframework.checker.units.qual.A;
@@ -16,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -40,21 +44,43 @@ public class ApplicationService {
     private ScheduleRepository scheduleRepository;
     @Autowired
     private TokenService tokenService;
+    @Autowired
+    private S3Service s3Service;
 
-    public ResponseEntity<?> applyForJob(String token, String jobId, String position, String cv) {
+    public ResponseEntity<?> applyForJob(String token, ApplyDTO dto) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Truy cập trái phép. Vui lòng đăng nhập lại.");
+            return ResponseEntity.status(401).body(Map.of("message","Truy cập trái phép. Vui lòng đăng nhập lại."));
         }
         if(!jwtUtil.checkWhetherIsApplicant(token)) {
-            return ResponseEntity.status(403).body("Bạn không có quyền thực hiện thao tác ứng tuyển.");
+            return ResponseEntity.status(403).body(Map.of("message","Bạn không có quyền thực hiện thao tác ứng tuyển."));
         }
+        String position = dto.getPosition();
+        String jobId = dto.getJobId();
         if(position!= null && position.isEmpty()|| position.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Vị trí ứng tuyển không được để trống.");
+            return ResponseEntity.badRequest().body(Map.of("message","Vị trí ứng tuyển không được để trống."));
         }
         String finalPosition = position.replace("_"," ");
+        String cv = null;
+        if(dto.getCv() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "vui lòng upload file cv!"));
+        }
+        try {
+            cv = s3Service.uploadFile(dto.getCv());
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "lỗi không upload được cv vui lòng thử lại sau!"));
+        }
         Applicant applicant = jwtUtil.getApplicant(token);
         JobPost job= jobPostRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
+        List<JobPosition> positions = job.getPositions();
+        String pos = dto.getPosition();
+        for(JobPosition jp : positions) {
+            if(jp.getName().equalsIgnoreCase(pos)){
+                if(jp.getQuantity()==0||jp.getStatus().equals(PositionStatus.CLOSED)){
+                    return ResponseEntity.badRequest().body(Map.of("message", "Rất tiếc, vị trí này đã không còn ứng tuyển nữa!"));
+                }
+            }
+        }
         Application application = new Application(job, applicant,finalPosition,cv);
         application.setAppliedAt(Instant.now());
         applicationRepository.save(application);
@@ -107,6 +133,20 @@ public class ApplicationService {
         if (application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
             return ResponseEntity.status(400).body("Đơn ứng tuyển này đã được chấp nhận từ trước.");
         }
+        String position= application.getPosition();
+        List<JobPosition> positions = job.getPositions();
+        for(JobPosition jp : positions) {
+            if(jp.getName().equalsIgnoreCase(position)){
+                if(jp.getQuantity()>0||jp.getStatus().equals(PositionStatus.OPEN)){
+                    jp.setQuantity(jp.getQuantity()-1);
+                    if(jp.getQuantity()==0){
+                        jp.setStatus(PositionStatus.CLOSED);
+                    }
+                }
+            }
+        }
+        job.setPositions(positions);
+        jobPostRepository.save(job);
         application.setStatus(ApplicationStatus.ACCEPTED);
         application.setAppliedAt(Instant.now());
         applicationRepository.save(application);

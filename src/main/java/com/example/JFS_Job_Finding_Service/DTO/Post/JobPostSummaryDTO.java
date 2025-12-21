@@ -9,6 +9,9 @@ import java.time.Instant;
 public class JobPostSummaryDTO {
     private String id;
     private String title;
+    private String employerId;
+    private long employerUserId;
+    private String employerName;
     private String salary;      // e.g., "1000 - 2000" or "Thương lượng"
     private String orgName;
     private String jobType;

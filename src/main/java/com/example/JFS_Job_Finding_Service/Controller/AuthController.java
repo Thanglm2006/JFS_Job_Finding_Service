@@ -143,16 +143,24 @@ public class AuthController {
 
     // ================= PROFILE MANAGEMENT =================
 
-    @PostMapping("/profile")
+    @PostMapping("/ApplicantProfile")
     @Operation(summary = "get profile information")
-    public ResponseEntity<?> getProfile(@RequestHeader HttpHeaders headers, @RequestParam("userId") Long userId) {
+    public ResponseEntity<?> getApplicantProfile(@RequestHeader HttpHeaders headers, @RequestParam("id") String applicantId) {
         if (headers != null && headers.get("token") != null) {
-            return userService.getProfile(headers.getFirst("token"), userId);
+            return userService.getApplicantProfile(headers.getFirst("token"), applicantId);
         } else {
             return ResponseEntity.status(401).body("Token is null");
         }
     }
-
+    @PostMapping("/EmployerProfile")
+    @Operation(summary = "get profile information")
+    public ResponseEntity<?> getEmployerProfile(@RequestHeader HttpHeaders headers, @RequestParam("id") String employerId) {
+        if (headers != null && headers.get("token") != null) {
+            return userService.getEmployerProfile(headers.getFirst("token"), employerId);
+        } else {
+            return ResponseEntity.status(401).body("Token is null");
+        }
+    }
     @PostMapping("/updateProfile")
     @Operation(summary = "update basic profile information")
     public ResponseEntity<?> updateProfile(@RequestHeader HttpHeaders headers, @RequestBody UpdateProfile body) {

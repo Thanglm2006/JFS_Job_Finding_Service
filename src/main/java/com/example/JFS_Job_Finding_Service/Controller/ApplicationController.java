@@ -26,9 +26,9 @@ public class ApplicationController {
     @Operation(summary = "apply for a post, only applicant can do this")
     public ResponseEntity<?> applyForJob(
             @RequestHeader HttpHeaders headers,
-            @RequestBody ApplyDTO dto
+            @ModelAttribute ApplyDTO dto
     ) {
-        return applicationService.applyForJob(headers.getFirst("token"), dto.getJobId(), dto.getPosition(), dto.getCv());
+        return applicationService.applyForJob(headers.getFirst("token"), dto);
     }
     @PostMapping("/accept")
     public ResponseEntity<?> acceptApplication(
