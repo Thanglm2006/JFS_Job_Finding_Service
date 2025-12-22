@@ -7,6 +7,7 @@ import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
 import com.example.JFS_Job_Finding_Service.models.Enum.PositionStatus;
+import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -317,7 +318,7 @@ public class PostService {
             }
 
             jobPost.setTitle(request.getTitle());
-            jobPost.setPositions(request.getPositions());
+            jobPost.setPositions((List<JobPosition>) jsonData.get("positinos"));
             jobPost.setAddresses(request.getAddresses());
             jobPost.setSalaryMin(request.getSalaryMin());
             jobPost.setSalaryMax(request.getSalaryMax());
