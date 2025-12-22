@@ -59,7 +59,12 @@ public interface JobPostRepository extends JpaRepository<JobPost, String> {
             @Param("limit") int limit,
             @Param("offset") int offset
     );
-    @Query(value = "SELECT count_employer_jobs_by_status(:employerId, :status)", nativeQuery = true)
+    @Query(value = """
+        SELECT COUNT(*) 
+        FROM job_post 
+        WHERE employer_id = :employerId 
+        AND positions @> CAST('[{"status": "' || :status || '"}]' AS jsonb)
+        """, nativeQuery = true)
     long countJobsByEmployerAndStatus(
             @Param("employerId") String employerId,
             @Param("status") String status

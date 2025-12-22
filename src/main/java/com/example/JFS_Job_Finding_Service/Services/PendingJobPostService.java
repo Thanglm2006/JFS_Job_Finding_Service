@@ -23,7 +23,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -48,8 +47,6 @@ public class PendingJobPostService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    // --- Helper Methods ---
-
     private String formatSalary(BigDecimal min, BigDecimal max) {
         return (min != null && max != null) ? min.toPlainString() + " - " + max.toPlainString() : "Thương lượng";
     }
@@ -60,18 +57,26 @@ public class PendingJobPostService {
         return jwtUtil.getEmployer(token);
     }
 
-    private Map<String, Map<String, Object>> parseJobData(PostingRequest request) throws JsonProcessingException {
-        Map<String, Map<String, Object>> parsedData = new HashMap<>();
-        parsedData.put("description", objectMapper.readValue(request.getDescription(), new TypeReference<>() {}));
-        parsedData.put("requirements", objectMapper.readValue(request.getRequirements(), new TypeReference<>() {}));
-        parsedData.put("responsibilities", objectMapper.readValue(request.getResponsibilities(), new TypeReference<>() {}));
-        parsedData.put("advantages", objectMapper.readValue(request.getAdvantages(), new TypeReference<>() {}));
-        parsedData.put("positions", objectMapper.readValue(request.getPositions(), new TypeReference<>() {}));
+    private Map<String, Object> parseJobData(PostingRequest request) throws JsonProcessingException {
+        Map<String, Object> parsedData = new HashMap<>();
+
+        parsedData.put("description", objectMapper.readValue(request.getDescription(), new TypeReference<Map<String, Object>>() {}));
+        parsedData.put("requirements", objectMapper.readValue(request.getRequirements(), new TypeReference<Map<String, Object>>() {}));
+        parsedData.put("responsibilities", objectMapper.readValue(request.getResponsibilities(), new TypeReference<Map<String, Object>>() {}));
+        parsedData.put("advantages", objectMapper.readValue(request.getAdvantages(), new TypeReference<Map<String, Object>>() {}));
+
+        List<JobPosition> positionList = objectMapper.readValue(
+                request.getPositions(),
+                new TypeReference<List<JobPosition>>() {}
+        );
+        parsedData.put("positions", positionList);
+
         Map<String, Object> extensionMap = new HashMap<>();
         if (request.getExtension() != null && !request.getExtension().isEmpty()) {
-            extensionMap = objectMapper.readValue(request.getExtension(), new TypeReference<>() {});
+            extensionMap = objectMapper.readValue(request.getExtension(), new TypeReference<Map<String, Object>>() {});
         }
         parsedData.put("extension", extensionMap);
+
         return parsedData;
     }
 
@@ -104,8 +109,7 @@ public class PendingJobPostService {
         return 0.0;
     }
 
-    // --- Main Service Methods ---
-
+    @SuppressWarnings("unchecked")
     public ResponseEntity<?> addPost(String token, PostingRequest request) {
         Employer employer = validateEmployerAccess(token);
         if (employer == null) {
@@ -117,28 +121,23 @@ public class PendingJobPostService {
         }
 
         try {
-            // Validation
             if (request.getPositions() == null || request.getPositions().isEmpty() || request.getAddresses() == null || request.getAddresses().length == 0) {
                 return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Thiếu thông tin vị trí hoặc địa chỉ."));
             }
 
-            // Parsing
-            Map<String, Map<String, Object>> jsonData = parseJobData(request);
+            Map<String, Object> jsonData = parseJobData(request);
 
-            // Scam Check
-            Double scamScore = performScamCheck(request.getTitle(), jsonData.get("description"));
+            Double scamScore = performScamCheck(request.getTitle(), (Map<String, Object>) jsonData.get("description"));
             if (scamScore > 0.7) {
                 return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(Map.of("status", "fail", "message", "Nội dung nghi ngờ lừa đảo.", "scam_score", scamScore));
             }
 
-            // Image Upload
             String workspacePictureFolder = null;
             if (request.getFiles() != null && request.getFiles().length > 0) {
                 String folderNameKey = request.getTitle().replaceAll("\\s+", "_") + "_" + System.currentTimeMillis();
                 workspacePictureFolder = cloudinaryService.uploadFiles(request.getFiles(), folderNameKey);
             }
 
-            // Saving
             PendingJobPost jobPost = new PendingJobPost();
             jobPost.setTitle(request.getTitle());
             jobPost.setEmployer(employer);
@@ -149,11 +148,11 @@ public class PendingJobPostService {
             jobPost.setType(JobType.valueOf(request.getType()));
             jobPost.setWorkspacePicture(workspacePictureFolder);
 
-            jobPost.setJobDescription(jsonData.get("description"));
-            jobPost.setRequirements(jsonData.get("requirements"));
-            jobPost.setResponsibilities(jsonData.get("responsibilities"));
-            jobPost.setAdvantages(jsonData.get("advantages"));
-            jobPost.setExtension(jsonData.get("extension"));
+            jobPost.setJobDescription((Map<String, Object>) jsonData.get("description"));
+            jobPost.setRequirements((Map<String, Object>) jsonData.get("requirements"));
+            jobPost.setResponsibilities((Map<String, Object>) jsonData.get("responsibilities"));
+            jobPost.setAdvantages((Map<String, Object>) jsonData.get("advantages"));
+            jobPost.setExtension((Map<String, Object>) jsonData.get("extension"));
 
             pendingJobPostRepository.save(jobPost);
 
@@ -171,6 +170,7 @@ public class PendingJobPostService {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public ResponseEntity<?> updatePendingPost(String token, long pendingId, PostingRequest request) {
         Employer employer = validateEmployerAccess(token);
         if (employer == null) {
@@ -187,23 +187,19 @@ public class PendingJobPostService {
         }
 
         try {
-            // Parsing
-            Map<String, Map<String, Object>> jsonData = parseJobData(request);
+            Map<String, Object> jsonData = parseJobData(request);
 
-            // Scam Check (Re-check on update)
-            Double scamScore = performScamCheck(request.getTitle(), jsonData.get("description"));
+            Double scamScore = performScamCheck(request.getTitle(), (Map<String, Object>) jsonData.get("description"));
             if (scamScore > 0.7) {
                 return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(Map.of("status", "fail", "message", "Nội dung cập nhật nghi ngờ lừa đảo.", "scam_score", scamScore));
             }
 
-            // Update Image if provided
             if (request.getFiles() != null && request.getFiles().length > 0) {
                 String folderNameKey = request.getTitle().replaceAll("\\s+", "_") + "_" + System.currentTimeMillis();
                 String newPics = cloudinaryService.uploadFiles(request.getFiles(), folderNameKey);
                 pendingPost.setWorkspacePicture(newPics);
             }
 
-            // Update Fields
             pendingPost.setTitle(request.getTitle());
             pendingPost.setPositions((List<JobPosition>) jsonData.get("positions"));
             pendingPost.setAddresses(request.getAddresses());
@@ -215,11 +211,11 @@ public class PendingJobPostService {
                 return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Loại công việc không hợp lệ."));
             }
 
-            pendingPost.setJobDescription(jsonData.get("description"));
-            pendingPost.setRequirements(jsonData.get("requirements"));
-            pendingPost.setResponsibilities(jsonData.get("responsibilities"));
-            pendingPost.setAdvantages(jsonData.get("advantages"));
-            pendingPost.setExtension(jsonData.get("extension"));
+            pendingPost.setJobDescription((Map<String, Object>) jsonData.get("description"));
+            pendingPost.setRequirements((Map<String, Object>) jsonData.get("requirements"));
+            pendingPost.setResponsibilities((Map<String, Object>) jsonData.get("responsibilities"));
+            pendingPost.setAdvantages((Map<String, Object>) jsonData.get("advantages"));
+            pendingPost.setExtension((Map<String, Object>) jsonData.get("extension"));
 
             pendingJobPostRepository.save(pendingPost);
 
