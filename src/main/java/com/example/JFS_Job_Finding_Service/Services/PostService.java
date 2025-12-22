@@ -56,18 +56,26 @@ public class PostService {
         return (min != null && max != null) ? min.toPlainString() + " - " + max.toPlainString() : "Thương lượng";
     }
 
-    private Map<String, Map<String, Object>> parseJobData(PostingRequest request) throws JsonProcessingException {
-        Map<String, Map<String, Object>> parsedData = new HashMap<>();
-        parsedData.put("description", objectMapper.readValue(request.getDescription(), new TypeReference<>() {}));
-        parsedData.put("requirements", objectMapper.readValue(request.getRequirements(), new TypeReference<>() {}));
-        parsedData.put("responsibilities", objectMapper.readValue(request.getResponsibilities(), new TypeReference<>() {}));
-        parsedData.put("advantages", objectMapper.readValue(request.getAdvantages(), new TypeReference<>() {}));
+    private Map<String, Object> parseJobData(PostingRequest request) throws JsonProcessingException {
+        Map<String, Object> parsedData = new HashMap<>();
+
+        parsedData.put("description", objectMapper.readValue(request.getDescription(), new TypeReference<Map<String, Object>>() {}));
+        parsedData.put("requirements", objectMapper.readValue(request.getRequirements(), new TypeReference<Map<String, Object>>() {}));
+        parsedData.put("responsibilities", objectMapper.readValue(request.getResponsibilities(), new TypeReference<Map<String, Object>>() {}));
+        parsedData.put("advantages", objectMapper.readValue(request.getAdvantages(), new TypeReference<Map<String, Object>>() {}));
+
+        List<JobPosition> positionList = objectMapper.readValue(
+                request.getPositions(),
+                new TypeReference<List<JobPosition>>() {}
+        );
+        parsedData.put("positions", positionList);
 
         Map<String, Object> extensionMap = new HashMap<>();
         if (request.getExtension() != null && !request.getExtension().isEmpty()) {
-            extensionMap = objectMapper.readValue(request.getExtension(), new TypeReference<>() {});
+            extensionMap = objectMapper.readValue(request.getExtension(), new TypeReference<Map<String, Object>>() {});
         }
         parsedData.put("extension", extensionMap);
+
         return parsedData;
     }
 
@@ -303,10 +311,10 @@ public class PostService {
         }
 
         try {
-            Map<String, Map<String, Object>> jsonData = parseJobData(request);
+            Map<String, Object> jsonData = parseJobData(request);
 
             // Re-check for scams on update
-            Double scamScore = performScamCheck(request.getTitle(), jsonData.get("description"));
+            Double scamScore = performScamCheck(request.getTitle(), (Map<String, Object>) jsonData.get("description"));
             if (scamScore > 0.7) {
                 return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(Map.of("status", "fail", "message", "Suspicious content detected"));
             }
@@ -318,7 +326,7 @@ public class PostService {
             }
 
             jobPost.setTitle(request.getTitle());
-            jobPost.setPositions((List<JobPosition>) jsonData.get("positinos"));
+            jobPost.setPositions((List<JobPosition>) jsonData.get("positions"));
             jobPost.setAddresses(request.getAddresses());
             jobPost.setSalaryMin(request.getSalaryMin());
             jobPost.setSalaryMax(request.getSalaryMax());
@@ -328,11 +336,11 @@ public class PostService {
                 return ResponseEntity.badRequest().body(Map.of("status", "fail", "message", "Invalid Job Type"));
             }
 
-            jobPost.setJobDescription(jsonData.get("description"));
-            jobPost.setRequirements(jsonData.get("requirements"));
-            jobPost.setResponsibilities(jsonData.get("responsibilities"));
-            jobPost.setAdvantages(jsonData.get("advantages"));
-            jobPost.setExtension(jsonData.get("extension"));
+            jobPost.setJobDescription((Map<String, Object>) jsonData.get("description"));
+            jobPost.setRequirements((Map<String, Object>) jsonData.get("requirements"));
+            jobPost.setResponsibilities((Map<String, Object>) jsonData.get("responsibilities"));
+            jobPost.setAdvantages((Map<String, Object>) jsonData.get("advantages"));
+            jobPost.setExtension((Map<String, Object>) jsonData.get("extension"));
 
             jobPostRepository.save(jobPost);
             return ResponseEntity.ok(Map.of("status", "success", "message", "Post updated successfully", "postId", jobPost.getId()));
