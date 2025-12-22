@@ -82,6 +82,7 @@ public class ApplicationService {
             }
         }
         Application application = new Application(job, applicant,finalPosition,cv);
+        application.setStatus(ApplicationStatus.PENDING);
         application.setAppliedAt(Instant.now());
         applicationRepository.save(application);
         Notification notification = new Notification();
