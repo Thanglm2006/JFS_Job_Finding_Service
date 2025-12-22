@@ -13,5 +13,5 @@ import java.io.Serializable;
 public class JobPosition implements Serializable {
     private String name;
     private Integer quantity;
-    private PositionStatus status;
+    private PositionStatus status=PositionStatus.OPEN;
 }
