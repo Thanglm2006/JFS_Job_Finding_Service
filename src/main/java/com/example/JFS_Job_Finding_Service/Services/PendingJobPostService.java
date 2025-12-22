@@ -5,6 +5,7 @@ import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
 import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
 import com.example.JFS_Job_Finding_Service.models.Enum.VerificationStatus;
+import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import com.example.JFS_Job_Finding_Service.repository.ImageFoldersRepository;
 import com.example.JFS_Job_Finding_Service.repository.JobPostRepository;
 import com.example.JFS_Job_Finding_Service.repository.NotificationRepository;
@@ -65,7 +66,7 @@ public class PendingJobPostService {
         parsedData.put("requirements", objectMapper.readValue(request.getRequirements(), new TypeReference<>() {}));
         parsedData.put("responsibilities", objectMapper.readValue(request.getResponsibilities(), new TypeReference<>() {}));
         parsedData.put("advantages", objectMapper.readValue(request.getAdvantages(), new TypeReference<>() {}));
-
+        parsedData.put("positions", objectMapper.readValue(request.getPositions(), new TypeReference<>() {}));
         Map<String, Object> extensionMap = new HashMap<>();
         if (request.getExtension() != null && !request.getExtension().isEmpty()) {
             extensionMap = objectMapper.readValue(request.getExtension(), new TypeReference<>() {});
@@ -141,7 +142,7 @@ public class PendingJobPostService {
             PendingJobPost jobPost = new PendingJobPost();
             jobPost.setTitle(request.getTitle());
             jobPost.setEmployer(employer);
-            jobPost.setPositions(request.getPositions());
+            jobPost.setPositions((List<JobPosition>) jsonData.get("positions"));
             jobPost.setAddresses(request.getAddresses());
             jobPost.setSalaryMin(request.getSalaryMin());
             jobPost.setSalaryMax(request.getSalaryMax());
@@ -204,7 +205,7 @@ public class PendingJobPostService {
 
             // Update Fields
             pendingPost.setTitle(request.getTitle());
-            pendingPost.setPositions(request.getPositions());
+            pendingPost.setPositions((List<JobPosition>) jsonData.get("positions"));
             pendingPost.setAddresses(request.getAddresses());
             pendingPost.setSalaryMin(request.getSalaryMin());
             pendingPost.setSalaryMax(request.getSalaryMax());
