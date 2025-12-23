@@ -300,6 +300,7 @@ public class ApplicationService {
                 application.put("userId", app.getApplicant().getUser().getId());
                 application.put("position",app.getPosition());
                 application.put("avatarUrl", app.getApplicant().getUser().getAvatarUrl());
+                application.put("interviewDate",app.getInterviewDate());
                 applications.add(application);
             }
         }
