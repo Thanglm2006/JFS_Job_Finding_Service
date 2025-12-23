@@ -56,6 +56,7 @@ public class ApplicationController {
             return ResponseEntity.status(500).body("Error unapplying for post: " + e.getMessage());
         }
     }
+
     @PostMapping("/setSchedule")
     public ResponseEntity<?> setSchedule(
             @RequestHeader HttpHeaders headers,

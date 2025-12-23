@@ -134,7 +134,7 @@ public class ApplicationService {
         if (!job.getEmployer().getUser().getEmail().equals(jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(403).body("Bạn không có quyền quản lý bài đăng tuyển dụng này.");
         }
-        if (application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
+        if (application.getStatus().equals(ApplicationStatus.REVIEWED)) {
             return ResponseEntity.status(400).body("Đơn ứng tuyển này đã được chấp nhận từ trước.");
         }
         String position= application.getPosition();
@@ -151,13 +151,13 @@ public class ApplicationService {
         }
         job.setPositions(positions);
         jobPostRepository.save(job);
-        application.setStatus(ApplicationStatus.ACCEPTED);
+        application.setStatus(ApplicationStatus.REVIEWED);
         application.setAppliedAt(Instant.now());
         application.setInterviewDate(interview);
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
-        notification.setMessage("Chúc mừng! Bạn đã được nhận vào làm việc tại vị trí " + application.getPosition() + " cho " + job.getEmployer().getOrgName());
+        notification.setMessage("Chúc mừng! bạn đã được nhà tuyển dụng phê duyệt và có lịch phỏng vấn vào "+interview.getHour()+":"+interview.getMinute()+","+interview.getDayOfMonth()+"/"+interview.getMonth()+"/"+interview.getYear());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
