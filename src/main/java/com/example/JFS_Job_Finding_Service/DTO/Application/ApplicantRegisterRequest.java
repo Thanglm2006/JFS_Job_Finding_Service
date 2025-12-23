@@ -1,10 +1,11 @@
-package com.example.JFS_Job_Finding_Service.DTO.Auth;
+package com.example.JFS_Job_Finding_Service.DTO.Application;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -15,4 +16,6 @@ public class ApplicantRegisterRequest {
     private LocalDate dateOfBirth;
     private String gender;
     private String name;
+
+
 }

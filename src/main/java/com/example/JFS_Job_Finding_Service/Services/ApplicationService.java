@@ -5,6 +5,7 @@ import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.DTO.Schedule;
 import com.example.JFS_Job_Finding_Service.models.Enum.ApplicationStatus;
 import com.example.JFS_Job_Finding_Service.models.Enum.PositionStatus;
+import com.example.JFS_Job_Finding_Service.models.Enum.VerificationStatus;
 import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
@@ -117,7 +118,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Đã rút đơn ứng tuyển thành công.");
     }
-    public ResponseEntity<?> accept(String token, String jobId, String applicantId, LocalDateTime interview) {
+    public ResponseEntity<?> acceptToInterview(String token, String jobId, String applicantId, LocalDateTime interview) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Truy cập trái phép.");
         }
@@ -137,6 +138,39 @@ public class ApplicationService {
         if (application.getStatus().equals(ApplicationStatus.REVIEWED)) {
             return ResponseEntity.status(400).body("Đơn ứng tuyển này đã được chấp nhận từ trước.");
         }
+        jobPostRepository.save(job);
+        application.setStatus(ApplicationStatus.REVIEWED);
+        application.setAppliedAt(Instant.now());
+        application.setInterviewDate(interview);
+        applicationRepository.save(application);
+        Notification notification = new Notification();
+        notification.setUser(applicant.getUser());
+        notification.setMessage("Chúc mừng! bạn đã được nhà tuyển dụng phê duyệt và có lịch phỏng vấn vào "+interview.getHour()+":"+interview.getMinute()+","+interview.getDayOfMonth()+"/"+interview.getMonth()+"/"+interview.getYear());
+        notification.setRead(false);
+        notification.setCreatedAt(Instant.now());
+        notificationRepository.save(notification);
+        return ResponseEntity.ok("Đã phê duyệt đơn ứng tuyển thành công.");
+    }
+    public ResponseEntity<?> accept(String token, String jobId, String applicantId) {
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(401).body("Truy cập trái phép.");
+        }
+        if(!jwtUtil.checkWhetherIsEmployer(token)) {
+            return ResponseEntity.status(403).body("Bạn không có quyền phê duyệt đơn ứng tuyển.");
+        }
+
+        Applicant applicant = applicantRepository.findById(applicantId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ứng viên với ID: " + applicantId));
+        JobPost job= jobPostRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
+        Application application = applicationRepository.findByJobAndApplicant(job, applicant)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn ứng tuyển tương ứng."));
+        if (!job.getEmployer().getUser().getEmail().equals(jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(403).body("Bạn không có quyền quản lý Đơn ứng tuyển này.");
+        }
+        if (application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
+            return ResponseEntity.status(400).body("Đơn ứng tuyển này đã được chấp nhận từ trước.");
+        }
         String position= application.getPosition();
         List<JobPosition> positions = job.getPositions();
         for(JobPosition jp : positions) {
@@ -151,18 +185,18 @@ public class ApplicationService {
         }
         job.setPositions(positions);
         jobPostRepository.save(job);
-        application.setStatus(ApplicationStatus.REVIEWED);
+        application.setStatus(ApplicationStatus.ACCEPTED);
         application.setAppliedAt(Instant.now());
-        application.setInterviewDate(interview);
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
-        notification.setMessage("Chúc mừng! bạn đã được nhà tuyển dụng phê duyệt và có lịch phỏng vấn vào "+interview.getHour()+":"+interview.getMinute()+","+interview.getDayOfMonth()+"/"+interview.getMonth()+"/"+interview.getYear());
+        notification.setMessage("Chúc mừng! bạn đã được nhà tuyển dụng phê duyệt vào làm tại vị trí: "+application.getPosition());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Đã phê duyệt đơn ứng tuyển thành công.");
     }
+
     public ResponseEntity<?> reject(String token, String jobId, String applicantId, String reason) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Truy cập trái phép.");
@@ -237,5 +271,39 @@ public class ApplicationService {
         response.put("totalApplicationsCount", applicationPage.getTotalElements());
         response.put("pageSize", applicationPage.getSize());
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    private Employer validateEmployerAccess(String token) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) return null;
+        if (!jwtUtil.checkWhetherIsEmployer(token)) return null;
+        return jwtUtil.getEmployer(token);
+    }
+    public ResponseEntity<?> getReviewedApplications(String token) {
+        Employer employer = validateEmployerAccess(token);
+        if (employer == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Truy cập bị từ chối."));
+        }
+
+        if (employer.getStatus() != VerificationStatus.VERIFIED) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Tài khoản của bạn chưa sẵn sàng (Pending/Rejected/Banned)."));
+        }
+        List<JobPost> posts = jobPostRepository.findByEmployer(employer);
+        List<Map<String, Object>> applications= new ArrayList<>();
+
+        for(JobPost post : posts) {
+            List<Application> applicationsL = applicationRepository.findByJobAndStatus(post, String.valueOf(ApplicationStatus.REVIEWED));
+            applicationsL.sort(Comparator.comparing(Application::getAppliedAt).reversed());
+            for(Application app : applicationsL) {
+                Map<String, Object> application = new HashMap<>();
+                application.put("id", app.getId());
+                application.put("cv", app.getCv());
+                application.put("applicantId", app.getApplicant().getId());
+                application.put("userId", app.getApplicant().getUser().getId());
+                application.put("position",app.getPosition());
+                application.put("avatarUrl", app.getApplicant().getUser().getAvatarUrl());
+                applications.add(application);
+            }
+        }
+        return ResponseEntity.ok(Map.of("applications", applications));
+
     }
 }

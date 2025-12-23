@@ -1,5 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
+import com.example.JFS_Job_Finding_Service.DTO.Application.ApplicantRegisterRequest;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
 import com.example.JFS_Job_Finding_Service.DTO.Employer.EmployerRequestInfoDTO;
 import com.example.JFS_Job_Finding_Service.DTO.Employer.EmployerUpdateDTO;

@@ -1,8 +1,6 @@
-package com.example.JFS_Job_Finding_Service.DTO.Auth;
+package com.example.JFS_Job_Finding_Service.DTO.Application;
 
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 

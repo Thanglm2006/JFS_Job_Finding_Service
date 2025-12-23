@@ -1,6 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
-import com.example.JFS_Job_Finding_Service.DTO.Auth.ApplicantResponse;
+import com.example.JFS_Job_Finding_Service.DTO.Application.ApplicantRegisterRequest;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -27,14 +27,14 @@ public class ApplicationController {
     @PostMapping("/accept")
     public ResponseEntity<?> acceptApplication(
             @RequestHeader HttpHeaders headers,
-            @RequestBody ApplicantResponse applicantResponse
+            @RequestBody ApplicantRegisterRequest.ApplicantResponse applicantResponse
     ) {
         return applicationService.accept(headers.getFirst("token"), applicantResponse.getApplicationId(), applicantResponse.getApplicantId());
     }
     @PostMapping("/reject")
     public ResponseEntity<?> rejectApplication(
             @RequestHeader HttpHeaders headers,
-            @RequestBody ApplicantResponse applicantResponse
+            @RequestBody ApplicantRegisterRequest.ApplicantResponse applicantResponse
     ) {
         return applicationService.reject(headers.getFirst("token"), applicantResponse.getApplicationId(), applicantResponse.getApplicantId());
     }

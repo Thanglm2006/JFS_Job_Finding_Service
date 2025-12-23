@@ -1,5 +1,5 @@
 package com.example.JFS_Job_Finding_Service.Controller;
-import com.example.JFS_Job_Finding_Service.DTO.Auth.ApplicantRegisterRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Application.ApplicantRegisterRequest;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.CheckPassRequest;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.LoginRequest;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.EmployerRegisterRequest;

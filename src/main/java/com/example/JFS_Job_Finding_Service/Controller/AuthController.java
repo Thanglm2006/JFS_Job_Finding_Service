@@ -1,8 +1,8 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
+import com.example.JFS_Job_Finding_Service.DTO.Application.ApplicantRegisterRequest;
 import com.example.JFS_Job_Finding_Service.DTO.Auth.*;
 import com.example.JFS_Job_Finding_Service.DTO.Employer.EmployerUpdateDTO;
-import com.example.JFS_Job_Finding_Service.DTO.Employer.ReviewEmployerDTO;
 import com.example.JFS_Job_Finding_Service.Services.AdminService;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import com.example.JFS_Job_Finding_Service.Services.RedisTokenService;
