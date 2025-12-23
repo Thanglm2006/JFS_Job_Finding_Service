@@ -57,7 +57,7 @@ public class EmployeeService {
         }
         List<Map<String,Object>> staffs = new ArrayList<>();
         for(JobPost jobPost : jobPosts){
-            List<Application> applications = applicationRepository.findByJobAndStatus(jobPost, "Accepted");
+            List<Application> applications = applicationRepository.findByJobAndStatus(jobPost, ApplicationStatus.ACCEPTED);
             for(Application application : applications) {
                 Map<String, Object> staffData = new HashMap<>();
                 Applicant applicant = application.getApplicant();
