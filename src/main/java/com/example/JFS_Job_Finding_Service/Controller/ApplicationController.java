@@ -56,12 +56,6 @@ public class ApplicationController {
             return ResponseEntity.status(500).body("Error unapplying for post: " + e.getMessage());
         }
     }
-    @PostMapping("/getAllApplicationsForEmployer")
-    public ResponseEntity<?> getAllApplicationsForEmployer(
-            @RequestHeader HttpHeaders headers
-    ) {
-        return applicationService.getAllApplicationForEmployer(headers.getFirst("token"));
-    }
     @PostMapping("/setSchedule")
     public ResponseEntity<?> setSchedule(
             @RequestHeader HttpHeaders headers,

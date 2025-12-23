@@ -1,9 +1,6 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.example.JFS_Job_Finding_Service.DTO.Post.JobPostDetailDTO;
-import com.example.JFS_Job_Finding_Service.DTO.Post.JobPostSummaryDTO;
-import com.example.JFS_Job_Finding_Service.DTO.Post.JobSearchRequest;
-import com.example.JFS_Job_Finding_Service.DTO.Post.PostingRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Post.*;
 import com.example.JFS_Job_Finding_Service.models.*;
 import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
 import com.example.JFS_Job_Finding_Service.models.Enum.PositionStatus;
@@ -130,6 +127,41 @@ public class PostService {
                 .isApplied(isApplied)
                 .build();
     }
+    private JobPostSummaryDTOForEmployer mapToPostReturnEmployer(JobPost jobPost, Applicant applicant) {
+        boolean isSaved = false;
+        boolean isApplied = false;
+        if (applicant != null) {
+            isSaved = !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
+            isApplied = applicationRepository.findByApplicant(applicant)
+                    .stream().anyMatch(app -> app.getJob().getId().equals(jobPost.getId()));
+        }
+        List<Application> applicationsL = applicationRepository.findByJob(jobPost);
+        applicationsL.sort(Comparator.comparing(Application::getAppliedAt).reversed());
+        List<Map<String, Object>> applications= new ArrayList<>();
+        for(Application app : applicationsL) {
+            Map<String, Object> application = new HashMap<>();
+            application.put("id", app.getId());
+            application.put("cv", app.getCv());
+            application.put("applicantId", app.getApplicant().getId());
+            application.put("userId", app.getApplicant().getUser().getId());
+            application.put("position",app.getPosition());
+            applications.add(application);
+        }
+        return JobPostSummaryDTOForEmployer.builder()
+                .id(jobPost.getId())
+                .title(jobPost.getTitle())
+                .employerName(jobPost.getEmployer().getUser().getFullName())
+                .employerUserId(jobPost.getEmployer().getUser().getId())
+                .employerId(jobPost.getEmployer().getId())
+                .orgName(jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown")
+                .jobType(String.valueOf(jobPost.getType()))
+                .salary(formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()))
+                .createdAt(jobPost.getCreatedAt())
+                .isSaved(isSaved)
+                .isApplied(isApplied)
+                .applicants(applications)
+                .build();
+    }
 
     // --- Main Methods ---
 
@@ -226,8 +258,8 @@ public class PostService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<JobPost> jobPostsPage = jobPostRepository.findByEmployer(employer, pageable);
 
-        List<JobPostSummaryDTO> posts = jobPostsPage.getContent().stream()
-                .map(post -> mapToSummaryDTO(post, null))
+        List<JobPostSummaryDTOForEmployer> posts = jobPostsPage.getContent().stream()
+                .map(post -> mapToPostReturnEmployer(post, null))
                 .toList();
 
         Map<String, Object> response = new HashMap<>();

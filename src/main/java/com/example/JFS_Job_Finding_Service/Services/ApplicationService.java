@@ -74,6 +74,9 @@ public class ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
         List<JobPosition> positions = job.getPositions();
         String pos = dto.getPosition();
+        if(!positions.contains(pos)){
+            return ResponseEntity.badRequest().body(Map.of("message", "Vị trí việc làm không tồn tại!"));
+        }
         for(JobPosition jp : positions) {
             if(jp.getName().equalsIgnoreCase(pos)){
                 if(jp.getQuantity()==0||jp.getStatus().equals(PositionStatus.CLOSED)){
@@ -150,6 +153,7 @@ public class ApplicationService {
         jobPostRepository.save(job);
         application.setStatus(ApplicationStatus.ACCEPTED);
         application.setAppliedAt(Instant.now());
+        application.setInterviewDate(interview);
         applicationRepository.save(application);
         Notification notification = new Notification();
         notification.setUser(applicant.getUser());
@@ -189,81 +193,6 @@ public class ApplicationService {
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
         return ResponseEntity.ok("Đã từ chối đơn ứng tuyển của ứng viên " + applicant.getUser().getFullName());
-    }
-
-    public ResponseEntity<?> getAllApplicationForEmployer(String token){
-        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body("Truy cập trái phép.");
-        }
-        if(!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("Bạn không có quyền xem danh sách ứng tuyển.");
-        }
-        Employer employer = jwtUtil.getEmployer(token);
-        if (employer == null) {
-            return ResponseEntity.status(404).body("Không tìm thấy thông tin nhà tuyển dụng.");
-        }
-        List<JobPost> jobPosts = jobPostRepository.findByEmployer(employer);
-        Map<String, Object> response = new HashMap<>();
-        if (jobPosts.isEmpty()) {
-            response.put("status", "fail");
-            response.put("message", "Hiện tại bạn chưa có bài đăng tuyển dụng nào.");
-            return ResponseEntity.ok(response);
-        }
-        List<Map<String, Object>> applications = jobPosts.stream().flatMap(jobPost -> {
-            List<Application> applicationsL = applicationRepository.findByJob(jobPost);
-            List<Map<String, Object>> applicationDataList = new ArrayList<>();
-            for(Application application : applicationsL) {
-                if (application == null||application.getStatus().equals(ApplicationStatus.REJECTED)|| application.getStatus().equals(ApplicationStatus.ACCEPTED)) {
-                    continue;
-                }
-                Applicant applicant = application.getApplicant();
-                String employerName = jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown";
-                List<ImageFolders> folder = List.of();
-                List<String> pics = new ArrayList<>(List.of());
-                if (jobPost.getWorkspacePicture() != null) {
-                    folder = imageFoldersRepository.findByFolderName(jobPost.getWorkspacePicture());
-                }
-                for (ImageFolders imageFolder : folder) {
-                    if (imageFolder.getFolderName().equals(jobPost.getWorkspacePicture())) {
-                        pics.add(imageFolder.getFileName());
-                    }
-                }
-                boolean isSaved = false;
-                boolean isApplied = true;
-                if (applicant != null) isSaved = !savedJobRepository.findByApplicantAndJob(applicant, jobPost).isEmpty();
-                int totalSaved = savedJobRepository.countByJob(jobPost);
-                Map<String, Object> applicationData = new HashMap<>();
-                Map<String, Object> postData = new HashMap<>();
-                postData.put("id", jobPost.getId());
-                postData.put("title", jobPost.getTitle());
-                postData.put("employerName", employerName);
-                postData.put("userId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
-                postData.put("isSaved", isSaved);
-                postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
-                postData.put("description", jobPost.getJobDescription());
-                postData.put("avatar", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getAvatarUrl() : null);
-                postData.put("workspacePicture", pics.toArray());
-                postData.put("createdAt", jobPost.getCreatedAt());
-                postData.put("totalSaved", totalSaved);
-                postData.put("isApplied", isApplied);
-                applicationData.put("applicationId", application.getId());
-                applicationData.put("applicantName", application.getApplicant().getUser().getFullName());
-                applicationData.put("status", application.getStatus());
-                applicationData.put("resume", application.getApplicant().getResume());
-                applicationData.put("position", application.getPosition());
-                applicationData.put("appliedAt", application.getAppliedAt());
-                applicationData.put("applicantId", application.getApplicant().getId());
-                applicationData.put("userId", application.getApplicant().getUser().getId());
-                applicationData.put("jobPost", postData);
-                applicationData.put("avatar", application.getApplicant().getUser().getAvatarUrl());
-
-                applicationDataList.add(applicationData);
-            }
-            return applicationDataList.stream();
-        }).filter(Objects::nonNull).toList();
-        response.put("status", "success");
-        response.put("applications", applications);
-        return ResponseEntity.ok(response);
     }
 
     public ResponseEntity<?> getJobs(String token, int page, int size) {
