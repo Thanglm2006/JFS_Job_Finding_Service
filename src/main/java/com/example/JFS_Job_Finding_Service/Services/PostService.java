@@ -136,7 +136,7 @@ public class PostService {
             isApplied = applicationRepository.findByApplicant(applicant)
                     .stream().anyMatch(app -> app.getJob().getId().equals(jobPost.getId()));
         }
-        List<Application> applicationsL = applicationRepository.findByJobAndStatus(jobPost, String.valueOf(ApplicationStatus.PENDING));
+        List<Application> applicationsL = applicationRepository.findByJobAndStatus(jobPost, ApplicationStatus.PENDING);
         applicationsL.sort(Comparator.comparing(Application::getAppliedAt).reversed());
         List<Map<String, Object>> applications= new ArrayList<>();
         for(Application app : applicationsL) {

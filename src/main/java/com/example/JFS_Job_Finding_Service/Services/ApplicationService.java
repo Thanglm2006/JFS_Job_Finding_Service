@@ -290,7 +290,7 @@ public class ApplicationService {
         List<Map<String, Object>> applications= new ArrayList<>();
 
         for(JobPost post : posts) {
-            List<Application> applicationsL = applicationRepository.findByJobAndStatus(post, String.valueOf(ApplicationStatus.REVIEWED));
+            List<Application> applicationsL = applicationRepository.findByJobAndStatus(post, ApplicationStatus.REVIEWED);
             applicationsL.sort(Comparator.comparing(Application::getAppliedAt).reversed());
             for(Application app : applicationsL) {
                 Map<String, Object> application = new HashMap<>();
