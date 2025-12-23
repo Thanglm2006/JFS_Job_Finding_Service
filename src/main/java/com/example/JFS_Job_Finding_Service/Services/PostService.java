@@ -2,6 +2,7 @@ package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.DTO.Post.*;
 import com.example.JFS_Job_Finding_Service.models.*;
+import com.example.JFS_Job_Finding_Service.models.Enum.ApplicationStatus;
 import com.example.JFS_Job_Finding_Service.models.Enum.JobType;
 import com.example.JFS_Job_Finding_Service.models.Enum.PositionStatus;
 import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
@@ -135,7 +136,7 @@ public class PostService {
             isApplied = applicationRepository.findByApplicant(applicant)
                     .stream().anyMatch(app -> app.getJob().getId().equals(jobPost.getId()));
         }
-        List<Application> applicationsL = applicationRepository.findByJob(jobPost);
+        List<Application> applicationsL = applicationRepository.findByJobAndStatus(jobPost, String.valueOf(ApplicationStatus.PENDING));
         applicationsL.sort(Comparator.comparing(Application::getAppliedAt).reversed());
         List<Map<String, Object>> applications= new ArrayList<>();
         for(Application app : applicationsL) {
