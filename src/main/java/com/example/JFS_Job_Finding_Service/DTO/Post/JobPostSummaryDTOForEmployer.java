@@ -21,4 +21,5 @@ public class JobPostSummaryDTOForEmployer {
     private boolean isSaved;
     private boolean isApplied;
     private List<Map<String, Object>> applicants;
+    private int numberOfApplicant;
 }

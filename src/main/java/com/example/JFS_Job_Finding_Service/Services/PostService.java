@@ -146,6 +146,7 @@ public class PostService {
             application.put("applicantId", app.getApplicant().getId());
             application.put("userId", app.getApplicant().getUser().getId());
             application.put("position",app.getPosition());
+
             application.put("avatarUrl", app.getApplicant().getUser().getAvatarUrl());
             applications.add(application);
         }
@@ -161,6 +162,7 @@ public class PostService {
                 .createdAt(jobPost.getCreatedAt())
                 .isSaved(isSaved)
                 .isApplied(isApplied)
+                .numberOfApplicant(applications.size())
                 .applicants(applications)
                 .build();
     }
