@@ -75,16 +75,16 @@ public class ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + jobId));
         List<JobPosition> positions = job.getPositions();
         String pos = dto.getPosition();
-        if(!positions.contains(pos)){
-            return ResponseEntity.badRequest().body(Map.of("message", "Vị trí việc làm không tồn tại!"));
-        }
+        boolean check=false;
         for(JobPosition jp : positions) {
             if(jp.getName().equalsIgnoreCase(pos)){
+                check=true;
                 if(jp.getQuantity()==0||jp.getStatus().equals(PositionStatus.CLOSED)){
                     return ResponseEntity.badRequest().body(Map.of("message", "Rất tiếc, vị trí này đã không còn ứng tuyển nữa!"));
                 }
             }
         }
+        if(!check) return ResponseEntity.badRequest().body(Map.of("message", "vị trí này Không tồn tại!"));
         Application application = new Application(job, applicant,finalPosition,cv);
         application.setStatus(ApplicationStatus.PENDING);
         application.setAppliedAt(Instant.now());
