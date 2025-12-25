@@ -488,7 +488,7 @@ public class UserService {
 
         response.put("status", "success");
         response.put("employerId", employerId);
-        response.put("employerUserID", employer.getUser().getId());
+        response.put("userId", employer.getUser().getId());
         response.put("organization", employer.getOrgName());
         response.put("field", employer.getType());
         response.put("verificationStatus", employer.getStatus());
@@ -572,7 +572,7 @@ public class UserService {
 
         response.put("status", "success");
         response.put("applicantId", applicant.getId());
-        response.put("applicantUserID", applicant.getUser().getId());
+        response.put("userId", applicant.getUser().getId());
         response.put("resume", applicant.getResume());
         return ResponseEntity.ok(response);
     }
