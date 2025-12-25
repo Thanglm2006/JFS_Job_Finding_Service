@@ -412,7 +412,7 @@ public class PostService {
         Applicant applicant = jwtUtil.getApplicant(token);
         if (applicant == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "appliedAt"));
         Page<Application> applicationPage = applicationRepository.findByApplicant(applicant, pageable);
 
         List<Map<String, Object>> applications = applicationPage.getContent().stream().map(app -> {
