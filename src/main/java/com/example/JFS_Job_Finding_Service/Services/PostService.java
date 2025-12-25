@@ -144,7 +144,7 @@ public class PostService {
             application.put("id", app.getId());
             application.put("cv", app.getCv());
             application.put("applicantId", app.getApplicant().getId());
-            application.put("userId", app.getApplicant().getUser().getId());
+            application.put("applicantUserId", app.getApplicant().getUser().getId());
             application.put("position",app.getPosition());
             application.put("name", app.getApplicant().getUser().getFullName());
             application.put("avatarUrl", app.getApplicant().getUser().getAvatarUrl());
@@ -421,6 +421,7 @@ public class PostService {
             data.put("applicationId", app.getId());
             data.put("jobId", job.getId());
             data.put("jobTitle", job.getTitle());
+            data.put("employerUserId",job.getEmployer().getUser().getId());
             data.put("jobCreatedAt", job.getCreatedAt());
             data.put("applicantId", applicant.getId());
             data.put("jobEmployerName", job.getEmployer() != null ? job.getEmployer().getOrgName() : "Unknown");
