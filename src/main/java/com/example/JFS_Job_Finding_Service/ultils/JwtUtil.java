@@ -29,7 +29,7 @@ public class JwtUtil {
     }
 
     private final String SECRET_KEY = "tfcyhdfhvbnjkftrygubhijutjyvhbnklyurfdvgbiujoasfsdf";
-    private final long EXPIRATION_TIME = (10800000/3)*24*3; // 3 hours
+    private final long EXPIRATION_TIME = (10800000)*24*7; // 3 hours
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());

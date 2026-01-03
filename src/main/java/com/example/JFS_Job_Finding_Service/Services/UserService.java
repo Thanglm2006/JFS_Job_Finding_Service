@@ -233,7 +233,7 @@ public class UserService {
         Map<String, Object> response = new HashMap<>();
         if(!jwtUtil.checkPermission(token,"admin") && !jwtUtil.validateToken(token)){
             response.put("error", "Invalid access");
-            response.put("message", "Bạn không có quyền thực hiện thao tác từ chối này.");
+            response.put("message", "Bạn không có quyền thực hiện thao tác phê duyệt này.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
         Employer employer =  employerRepository.findById(dto.getEmployerId()).orElse(null);
@@ -817,6 +817,8 @@ public class UserService {
 
         Employer employer = employerRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ nhà tuyển dụng."));
+        if(employer.getStatus()==VerificationStatus.VERIFIED)
+            return ResponseEntity.badRequest().body(Map.of("message", "khong the gui request lai, da duocj duyet"));
         if(employerRequestRepository.findByEmployer(employer).isPresent()){
             return ResponseEntity.badRequest().body(Map.of("message","bạn đã gửi yêu cầu trước đó rồi, vui lòng đợi duyệt"));
         }
