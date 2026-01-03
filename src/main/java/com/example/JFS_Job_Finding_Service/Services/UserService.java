@@ -912,7 +912,7 @@ public class UserService {
 
         return ResponseEntity.ok(dtos);
     }
-    public ResponseEntity<?> getEmployerProfileForHim(String token, String employerId) {
+    public ResponseEntity<?> getEmployerProfileForHim(String token) {
         Map<String, Object> response = new HashMap<>();
         String email = jwtUtil.extractEmail(token);
         // 1. Validate Token
@@ -921,15 +921,14 @@ public class UserService {
             response.put("message", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
-        // 2. Lấy thông tin Employer
-        Optional<Employer> employerOptional = employerRepository.findById(employerId);
-        if (employerOptional.isEmpty()) {
-            response.put("status", "fail");
-            response.put("message", "Không tìm thấy thông tin người dùng.");
-            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-        }
-        Employer employer = employerOptional.get();
 
+        Employer employer = jwtUtil.getEmployer(token);
+        if(employer == null) return ResponseEntity.badRequest().body(response);
+        if(!employer.getUser().getEmail().equals(email)) {
+            response.put("status", "fail");
+            response.put("message", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
         User currentUser = userRepository.findByEmail(email).orElse(null);
         Applicant currentApplicant = null;
         if (currentUser != null && "Applicant".equals(currentUser.getRole())) { // Check role nếu cần
@@ -941,7 +940,7 @@ public class UserService {
         response.putAll(userInfor);
 
         response.put("status", "success");
-        response.put("employerId", employerId);
+        response.put("employerId", employer.getId());
         response.put("userId", employer.getUser().getId());
         response.put("organization", employer.getOrgName());
         response.put("field", employer.getType());
@@ -961,9 +960,9 @@ public class UserService {
         int offset = (int) pageable.getOffset();
 
         List<JobPost> openJobsList = jobPostRepository.findJobsByEmployerAndStatus(
-                employerId, "OPEN", limit, offset
+                employer.getId(), "OPEN", limit, offset
         );
-        long totalOpenJobs = jobPostRepository.countJobsByEmployerAndStatus(employerId, "OPEN");
+        long totalOpenJobs = jobPostRepository.countJobsByEmployerAndStatus(employer.getId(), "OPEN");
 
         Applicant finalApplicant = currentApplicant;
         List<JobPostSummaryDTO> openJobDTOs = openJobsList.stream()
@@ -975,9 +974,9 @@ public class UserService {
 
 
         List<JobPost> closedJobsList = jobPostRepository.findJobsByEmployerAndStatus(
-                employerId, "CLOSED", limit, offset
+                employer.getId(), "CLOSED", limit, offset
         );
-        long totalClosedJobs = jobPostRepository.countJobsByEmployerAndStatus(employerId, "CLOSED");
+        long totalClosedJobs = jobPostRepository.countJobsByEmployerAndStatus(employer.getId(), "CLOSED");
 
         List<JobPostSummaryDTO> closedJobDTOs = closedJobsList.stream()
                 .map(post -> mapToSummaryDTO(post, finalApplicant))

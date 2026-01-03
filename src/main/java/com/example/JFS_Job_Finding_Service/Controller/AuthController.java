@@ -159,9 +159,9 @@ public class AuthController {
     }
     @PostMapping("/EmployerOwnProfile")
     @Operation(summary = "get profile information")
-    public ResponseEntity<?> getApplicantProfileOwn(@RequestHeader HttpHeaders headers, @RequestParam("id") String applicantId) {
+    public ResponseEntity<?> getApplicantProfileOwn(@RequestHeader HttpHeaders headers) {
         if (headers != null && headers.get("token") != null) {
-            return userService.getEmployerProfileForHim(headers.getFirst("token"), applicantId);
+            return userService.getEmployerProfileForHim(headers.getFirst("token"));
         } else {
             return ResponseEntity.status(401).body("Token is null");
         }
