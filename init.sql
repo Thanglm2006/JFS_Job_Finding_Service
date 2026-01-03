@@ -143,7 +143,15 @@ CREATE TABLE schedule (
     description TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
+create table Interview (
+    id SERIAL PRIMARY KEY,
+    applicant_id TEXT NOT NULL REFERENCES applicant(id) ON DELETE CASCADE,
+    employer_id TEXT REFERENCES employer(id) ON DELETE CASCADE,
+    interview_date TIMESTAMP DEFAULT NOW(),
+    room text,
+    created_at TIMESTAMP DEFAULT NOW()
 
+);
 CREATE TABLE report_on_user (
     id SERIAL PRIMARY KEY,
     reported_by INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

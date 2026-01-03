@@ -154,9 +154,14 @@ public class AuthController {
     }
     @PostMapping("/EmployerProfile")
     @Operation(summary = "get profile information")
-    public ResponseEntity<?> getEmployerProfile(@RequestHeader HttpHeaders headers, @RequestParam("id") String employerId) {
+    public ResponseEntity<?> getEmployerProfile(@RequestHeader HttpHeaders headers,@RequestParam("id") String employerId) {
+        return userService.getEmployerProfile(headers.getFirst("token"), employerId);
+    }
+    @PostMapping("/EmployerOwnProfile")
+    @Operation(summary = "get profile information")
+    public ResponseEntity<?> getApplicantProfileOwn(@RequestHeader HttpHeaders headers, @RequestParam("id") String applicantId) {
         if (headers != null && headers.get("token") != null) {
-            return userService.getEmployerProfile(headers.getFirst("token"), employerId);
+            return userService.getEmployerProfileForHim(headers.getFirst("token"), applicantId);
         } else {
             return ResponseEntity.status(401).body("Token is null");
         }

@@ -8,6 +8,7 @@ import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import com.example.JFS_Job_Finding_Service.Services.EmployeeService;
 import com.example.JFS_Job_Finding_Service.Services.ScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -35,7 +36,7 @@ public class ApplicationController {
     public ResponseEntity<?> acceptApplication(
             @RequestHeader HttpHeaders headers,
             @RequestBody ApplicantResponse applicantResponse
-    ) {
+    ) throws MessagingException {
         return applicationService.acceptToInterview(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId(), applicantResponse.getInterview());
     }
     @PostMapping("accept")

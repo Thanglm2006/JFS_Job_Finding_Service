@@ -458,15 +458,10 @@ public class UserService {
     }
     public ResponseEntity<?> getEmployerProfile(String token, String employerId) {
         Map<String, Object> response = new HashMap<>();
-        String email = jwtUtil.extractEmail(token);
-
-        // 1. Validate Token
-        if (!tokenService.validateToken(token, email)) {
-            response.put("status", "fail");
-            response.put("message", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
-        }
-
+        String email;
+        if(token!=null&&!token.isEmpty())
+        email = jwtUtil.extractEmail(token);
+        else email=null;
         // 2. Lấy thông tin Employer
         Optional<Employer> employerOptional = employerRepository.findById(employerId);
         if (employerOptional.isEmpty()) {
@@ -475,8 +470,10 @@ public class UserService {
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
         Employer employer = employerOptional.get();
-
-        User currentUser = userRepository.findByEmail(email).orElse(null);
+        User currentUser;
+        if(email!=null)
+        currentUser = userRepository.findByEmail(email).orElse(null);
+        else currentUser=null;
         Applicant currentApplicant = null;
         if (currentUser != null && "Applicant".equals(currentUser.getRole())) { // Check role nếu cần
             currentApplicant = applicantRepository.findByUserId(currentUser.getId()).orElse(null);
@@ -491,6 +488,8 @@ public class UserService {
         response.put("userId", employer.getUser().getId());
         response.put("organization", employer.getOrgName());
         response.put("field", employer.getType());
+        response.put("email", employer.getUser().getEmail());
+        response.put("phone", employer.getUser().getPhone());
         response.put("verificationStatus", employer.getStatus());
 
         Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -574,6 +573,8 @@ public class UserService {
         response.put("applicantId", applicant.getId());
         response.put("userId", applicant.getUser().getId());
         response.put("resume", applicant.getResume());
+        response.put("phone",applicant.getUser().getPhone());
+        response.put("email",applicant.getUser().getEmail());
         return ResponseEntity.ok(response);
     }
     public ResponseEntity<?> updateAvatar(String token, MultipartFile file) {
@@ -816,7 +817,9 @@ public class UserService {
 
         Employer employer = employerRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ nhà tuyển dụng."));
-
+        if(employerRequestRepository.findByEmployer(employer).isPresent()){
+            return ResponseEntity.badRequest().body(Map.of("message","bạn đã gửi yêu cầu trước đó rồi, vui lòng đợi duyệt"));
+        }
         try {
             if (dto.getBusinessLicense() != null && !dto.getBusinessLicense().isEmpty()) {
                 String licenseUrl = s3Service.uploadFile(dto.getBusinessLicense());
@@ -909,7 +912,82 @@ public class UserService {
 
         return ResponseEntity.ok(dtos);
     }
+    public ResponseEntity<?> getEmployerProfileForHim(String token, String employerId) {
+        Map<String, Object> response = new HashMap<>();
+        String email = jwtUtil.extractEmail(token);
+        // 1. Validate Token
+        if (!tokenService.validateToken(token, email)) {
+            response.put("status", "fail");
+            response.put("message", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        // 2. Lấy thông tin Employer
+        Optional<Employer> employerOptional = employerRepository.findById(employerId);
+        if (employerOptional.isEmpty()) {
+            response.put("status", "fail");
+            response.put("message", "Không tìm thấy thông tin người dùng.");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        Employer employer = employerOptional.get();
 
+        User currentUser = userRepository.findByEmail(email).orElse(null);
+        Applicant currentApplicant = null;
+        if (currentUser != null && "Applicant".equals(currentUser.getRole())) { // Check role nếu cần
+            currentApplicant = applicantRepository.findByUserId(currentUser.getId()).orElse(null);
+        }
+
+        User user = employer.getUser();
+        Map<String, Object> userInfor = getUserInfor(user);
+        response.putAll(userInfor);
+
+        response.put("status", "success");
+        response.put("employerId", employerId);
+        response.put("userId", employer.getUser().getId());
+        response.put("organization", employer.getOrgName());
+        response.put("field", employer.getType());
+        response.put("email", employer.getUser().getEmail());
+        response.put("phone", employer.getUser().getPhone());
+        response.put("companyWebsite", employer.getCompanyWebsite());
+        response.put("businessCode", employer.getBusinessCode());
+        response.put("companyEmail", employer.getCompanyEmail());
+        response.put("businessLicenseUrl", employer.getBusinessLicenseUrl());
+        response.put("taxCode", employer.getTaxCode());
+        response.put("idCardFrontUrl", employer.getIdCardFront());
+        response.put("idCardNumber", employer.getIdCardNumber());
+        response.put("verificationStatus", employer.getStatus());
+
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        int limit = pageable.getPageSize();
+        int offset = (int) pageable.getOffset();
+
+        List<JobPost> openJobsList = jobPostRepository.findJobsByEmployerAndStatus(
+                employerId, "OPEN", limit, offset
+        );
+        long totalOpenJobs = jobPostRepository.countJobsByEmployerAndStatus(employerId, "OPEN");
+
+        Applicant finalApplicant = currentApplicant;
+        List<JobPostSummaryDTO> openJobDTOs = openJobsList.stream()
+                .map(post -> mapToSummaryDTO(post, finalApplicant))
+                .toList();
+
+        Page<JobPostSummaryDTO> openJobsPage = new PageImpl<>(openJobDTOs, pageable, totalOpenJobs);
+        response.put("openJobs", openJobsPage);
+
+
+        List<JobPost> closedJobsList = jobPostRepository.findJobsByEmployerAndStatus(
+                employerId, "CLOSED", limit, offset
+        );
+        long totalClosedJobs = jobPostRepository.countJobsByEmployerAndStatus(employerId, "CLOSED");
+
+        List<JobPostSummaryDTO> closedJobDTOs = closedJobsList.stream()
+                .map(post -> mapToSummaryDTO(post, finalApplicant))
+                .toList();
+
+        Page<JobPostSummaryDTO> closedJobsPage = new PageImpl<>(closedJobDTOs, pageable, totalClosedJobs);
+        response.put("closedJobs", closedJobsPage);
+
+        return ResponseEntity.ok(response);
+    }
     private static class VerificationInfo {
         @lombok.Getter
         private final String code;

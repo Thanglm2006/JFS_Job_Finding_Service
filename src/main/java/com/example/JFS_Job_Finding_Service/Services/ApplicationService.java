@@ -9,6 +9,7 @@ import com.example.JFS_Job_Finding_Service.models.Enum.VerificationStatus;
 import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
+import jakarta.mail.MessagingException;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.batch.BatchProperties;
@@ -47,6 +48,9 @@ public class ApplicationService {
     private TokenService tokenService;
     @Autowired
     private S3Service s3Service;
+    private InterviewRepository interviewRepository;
+    @Autowired
+    private MailService mailService;
 
     public ResponseEntity<?> applyForJob(String token, ApplyDTO dto) {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
@@ -118,7 +122,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Đã rút đơn ứng tuyển thành công.");
     }
-    public ResponseEntity<?> acceptToInterview(String token, String jobId, String applicantId, LocalDateTime interview) {
+    public ResponseEntity<?> acceptToInterview(String token, String jobId, String applicantId, LocalDateTime interview) throws MessagingException {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Truy cập trái phép.");
         }
@@ -138,7 +142,6 @@ public class ApplicationService {
         if (application.getStatus().equals(ApplicationStatus.REVIEWED)) {
             return ResponseEntity.status(400).body("Đơn ứng tuyển này đã được chấp nhận từ trước.");
         }
-        jobPostRepository.save(job);
         application.setStatus(ApplicationStatus.REVIEWED);
         application.setAppliedAt(Instant.now());
         application.setInterviewDate(interview);
@@ -149,6 +152,13 @@ public class ApplicationService {
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
         notificationRepository.save(notification);
+        InterView interView = new InterView();
+        interView.setApplicant(applicant);
+        interView.setEmployer(job.getEmployer());
+        interView.setRoom(job.getEmployer().getId()+applicant.getId());
+        interView.setInterviewDate(interview);
+        interviewRepository.save(interView);
+        mailService.sendInterviewInvitation(applicant.getUser().getEmail(),applicant.getUser().getFullName(), job.getTitle(),interview.getHour()+":"+interview.getMinute()+","+interview.getDayOfMonth()+"/"+interview.getMonth()+"/"+interview.getYear(),"https://job-fs.me/interview/"+job.getEmployer().getId()+applicant.getId());
         return ResponseEntity.ok("Đã phê duyệt đơn ứng tuyển thành công.");
     }
     public ResponseEntity<?> accept(String token, String jobId, String applicantId) {

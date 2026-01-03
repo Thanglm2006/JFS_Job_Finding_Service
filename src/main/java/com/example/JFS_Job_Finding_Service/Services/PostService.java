@@ -170,18 +170,20 @@ public class PostService {
     // --- Main Methods ---
 
     public ResponseEntity<?> getSomePosts(String token, int page, int size) {
+        Applicant applicant;
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+           applicant=null;
         }
-        Applicant applicant = jwtUtil.getApplicant(token);
+        applicant = jwtUtil.getApplicant(token);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<JobPost> jobPostsPage = jobPostRepository.findAll(pageable);
 
+        Applicant finalApplicant = applicant;
         List<JobPostSummaryDTO> posts = jobPostsPage.getContent().stream().filter(post -> post.getPositions() != null &&
                         post.getPositions().stream()
                                 .anyMatch(pos -> PositionStatus.OPEN.equals(pos.getStatus())))
-                .map(post -> mapToSummaryDTO(post, applicant))
+                .map(post -> mapToSummaryDTO(post, finalApplicant))
                 .toList();
 
         Map<String, Object> response = new HashMap<>();
@@ -193,13 +195,11 @@ public class PostService {
     }
 
     public ResponseEntity<?> fullTextSearchPosts(String token, JobSearchRequest searchDTO) {
+        Applicant applicant;
         if (!tokenService.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+            applicant=null;
         }
-        Applicant applicant = jwtUtil.getApplicant(token);
-        if (applicant == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Not an applicant"));
-        }
+        applicant = jwtUtil.getApplicant(token);
 
         if (searchDTO.getType() != null && searchDTO.getType().isEmpty()) searchDTO.setType(null);
 
@@ -209,43 +209,48 @@ public class PostService {
                 searchDTO.getLimit(), searchDTO.getOffset()
         );
 
+        Applicant finalApplicant = applicant;
         List<JobPostSummaryDTO> posts = jobPosts.stream().filter(post -> post.getPositions() != null &&
                         post.getPositions().stream()
                                 .anyMatch(pos -> PositionStatus.OPEN.equals(pos.getStatus())))
-                .map(post -> mapToSummaryDTO(post, applicant))
+                .map(post -> mapToSummaryDTO(post, finalApplicant))
                 .toList();
 
         return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
     }
     public ResponseEntity<?> findByEmployerName(String token, String name, int page, int limit) {
+        Applicant applicant;
         if (!tokenService.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+            applicant=null;
         }
-        Applicant applicant = jwtUtil.getApplicant(token);
+        applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Not an applicant"));
         }
         List<JobPost> jobPosts = jobPostRepository.findByEmployerName(name, page, limit);
+        Applicant finalApplicant = applicant;
         List<JobPostSummaryDTO> posts = jobPosts.stream().filter(post -> post.getPositions() != null &&
                         post.getPositions().stream()
                                 .anyMatch(pos -> PositionStatus.OPEN.equals(pos.getStatus())))
-                .map(post -> mapToSummaryDTO(post, applicant))
+                .map(post -> mapToSummaryDTO(post, finalApplicant))
                 .toList();
         return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
     }
     public ResponseEntity<?> findByOrgName(String token, String name, int page, int limit) {
+        Applicant applicant;
         if (!tokenService.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+            applicant=null;
         }
-        Applicant applicant = jwtUtil.getApplicant(token);
+        applicant = jwtUtil.getApplicant(token);
         if (applicant == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Not an applicant"));
         }
         List<JobPost> jobPosts = jobPostRepository.findByOrgName(name, page, limit);
+        Applicant finalApplicant = applicant;
         List<JobPostSummaryDTO> posts = jobPosts.stream().filter(post -> post.getPositions() != null &&
                         post.getPositions().stream()
                                 .anyMatch(pos -> PositionStatus.OPEN.equals(pos.getStatus())))
-                .map(post -> mapToSummaryDTO(post, applicant))
+                .map(post -> mapToSummaryDTO(post, finalApplicant))
                 .toList();
         return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
     }
@@ -275,14 +280,15 @@ public class PostService {
     }
 
     public ResponseEntity<?> getJobPostDetail(String token, String postId) {
-        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail", "message", "Unauthorized"));
+        Applicant applicant;
+        if (!tokenService.validateToken(token)) {
+            applicant=null;
         }
+        applicant = jwtUtil.getApplicant(token);
 
         JobPost jobPost = jobPostRepository.findById(postId).orElse(null);
         if (jobPost == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", "fail"));
 
-        Applicant applicant = jwtUtil.getApplicant(token);
         try {
             boolean isSaved = false;
             boolean isApplied = false;

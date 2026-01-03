@@ -1,6 +1,8 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
 import com.example.JFS_Job_Finding_Service.Services.AgoraTokenService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.token.TokenService;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
@@ -17,8 +19,10 @@ public class AgoraTokenController {
     }
 
     @GetMapping("/call-token")
-    public Map<String, String> getToken(@RequestParam("channel") String channel, @RequestParam("uid") int uid) {
-        String token = tokenService.generateToken(channel, uid);
-        return Map.of("token", token);
+    public ResponseEntity<?> getToken(@RequestHeader HttpHeaders headers, @RequestParam("channel") String channel, @RequestParam("uid") int uid) {
+        String token = tokenService.generateToken(headers.getFirst("token"),channel, uid);
+        if(token!=null)
+        return ResponseEntity.ok().body(Map.of("token",token));
+        else return ResponseEntity.badRequest().build();
     }
 }
