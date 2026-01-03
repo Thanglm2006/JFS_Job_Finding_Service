@@ -252,7 +252,7 @@ public class UserService {
         if (request != null) {
             request.setStatus(VerificationStatus.REJECTED);
             request.setRejectionReason(dto.getReason());
-            employerRequestRepository.save(request);
+            employerRequestRepository.delete(request);
         }
 
         Notification notification = new Notification();
