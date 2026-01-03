@@ -138,4 +138,33 @@ public class ScheduleService {
         response.put("schedules", schedulesByDay);
         return ResponseEntity.ok(response);
     }
+    public ResponseEntity<?> getSchedulesForEmployer(String token, String ApplicantId){
+        if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(401).body("Truy cập trái phép.");
+        }
+        if(!jwtUtil.checkWhetherIsApplicant(token)) {
+            return ResponseEntity.status(403).body("Bạn không có quyền xem lịch trình.");
+        }
+        Applicant applicant = applicantRepository.findById(ApplicantId).orElse(null);
+        if (applicant == null) {
+            return ResponseEntity.status(404).body("Không tìm thấy thông tin ứng viên.");
+        }
+        List<com.example.JFS_Job_Finding_Service.models.Schedule> schedules = scheduleRepository.findByApplicant(applicant);
+        schedules.sort(Comparator.comparingInt(com.example.JFS_Job_Finding_Service.models.Schedule::getStartTime));
+        if (schedules.isEmpty()) {
+            return ResponseEntity.ok("Applicant chưa có lịch trình làm việc nào.");
+        }
+        Map<String, List<com.example.JFS_Job_Finding_Service.models.Schedule>> schedulesByDay = new HashMap<>();
+        for (com.example.JFS_Job_Finding_Service.models.Schedule schedule : schedules) {
+            String day = schedule.getDay();
+            if (!schedulesByDay.containsKey(day)) {
+                schedulesByDay.put(day, new ArrayList<>());
+            }
+            schedulesByDay.get(day).add(schedule);
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("schedules", schedulesByDay);
+        return ResponseEntity.ok(response);
+    }
 }

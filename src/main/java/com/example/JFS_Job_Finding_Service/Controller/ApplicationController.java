@@ -93,6 +93,12 @@ public class ApplicationController {
     ) {
         return scheduleService.getSchedulesForApplicant(headers.getFirst("token"));
     }
+    @GetMapping("/getSchedulesForEmployer")
+    public ResponseEntity<?> getSchedulesForEmployer(
+            @RequestHeader HttpHeaders headers, @RequestParam("applicantId") String applicantId
+    ) {
+        return scheduleService.getSchedulesForEmployer(headers.getFirst("token"), applicantId);
+    }
     @PostMapping("/deleteStaff")
     public ResponseEntity<?> deleteStaff(
             @RequestHeader HttpHeaders headers,

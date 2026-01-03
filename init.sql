@@ -147,7 +147,7 @@ CREATE TABLE schedule (
 CREATE TABLE report_on_user (
     id SERIAL PRIMARY KEY,
     reported_by INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    reported_user INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reported_user INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,V
     reason TEXT NOT NULL,
     details TEXT,
     created_at TIMESTAMP DEFAULT NOW()
