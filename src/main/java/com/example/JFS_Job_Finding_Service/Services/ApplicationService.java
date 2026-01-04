@@ -10,6 +10,7 @@ import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import jakarta.mail.MessagingException;
+import jakarta.transaction.Transactional;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.batch.BatchProperties;
@@ -122,6 +123,7 @@ public class ApplicationService {
         notificationRepository.save(notification);
         return ResponseEntity.ok("Đã rút đơn ứng tuyển thành công.");
     }
+    @Transactional
     public ResponseEntity<?> acceptToInterview(String token, String jobId, String applicantId, LocalDateTime interview) throws MessagingException {
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Truy cập trái phép.");
