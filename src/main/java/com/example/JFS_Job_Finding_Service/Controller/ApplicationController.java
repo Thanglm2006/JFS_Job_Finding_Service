@@ -107,4 +107,8 @@ public class ApplicationController {
     ) {
         return employeeService.deletestaff(headers.getFirst("token"),  applicantResponse.getApplicantId(),applicantResponse.getJobId());
     }
+    @GetMapping("/getInterView")
+    public ResponseEntity<?> getInterView(@RequestHeader HttpHeaders headers) {
+        return applicationService.getEmployerInterviews(headers.getFirst("token"));
+    }
 }
