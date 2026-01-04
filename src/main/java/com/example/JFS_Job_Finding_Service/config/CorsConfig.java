@@ -15,7 +15,15 @@ public class CorsConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("https://test.job-fs.me", "https://www.test.job-fs.me", "http://localhost:5173","https://danhdeptrai.vercel.app","https://www.danhdeptrai.vercel.app"));
+        configuration.setAllowedOrigins(Arrays.asList("https://test.job-fs.me"
+                , "https://www.test.job-fs.me"
+                , "http://localhost:5173"
+                ,"https://danhdeptrai.vercel.app"
+                ,"https://www.danhdeptrai.vercel.app"
+                , "https://www.job-fs.me"
+                , "https://job-fs.me"
+                , "https://www.admin.job-fs.me"
+                , "https://admin.job-fs.me"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
