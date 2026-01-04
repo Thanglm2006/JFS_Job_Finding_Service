@@ -322,7 +322,7 @@ public class ApplicationService {
                 application.put("position",app.getPosition());
                 application.put("avatarUrl", app.getApplicant().getUser().getAvatarUrl());
                 application.put("interviewDate",app.getInterviewDate());
-                application.put("room", interviewRepository.findByEmployerAndApplicant(employer,app.getApplicant()).getRoom());
+                application.put("room", interviewRepository.findOneByEmployerAndApplicant(employer,app.getApplicant()).getRoom());
                 applications.add(application);
             }
         }

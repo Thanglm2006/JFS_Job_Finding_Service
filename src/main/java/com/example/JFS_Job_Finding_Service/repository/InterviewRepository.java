@@ -11,5 +11,5 @@ import java.util.List;
 public interface InterviewRepository extends JpaRepository<InterView, Long> {
     List<InterView> findByEmployer(Employer employer);
 
-    InterView findByEmployerAndApplicant(Employer employer, Applicant applicant);
+    InterView findOneByEmployerAndApplicant(Employer employer, Applicant applicant);
 }
