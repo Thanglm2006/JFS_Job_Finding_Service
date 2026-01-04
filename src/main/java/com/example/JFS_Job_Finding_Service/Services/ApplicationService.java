@@ -124,7 +124,7 @@ public class ApplicationService {
         return ResponseEntity.ok("Đã rút đơn ứng tuyển thành công.");
     }
     @Transactional
-    public ResponseEntity<?> acceptToInterview(String token, String jobId, String applicantId, LocalDateTime interview) throws MessagingException {
+    public ResponseEntity<?> acceptToInterview(String token, String jobId, String applicantId, LocalDateTime interview){
         if(!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
             return ResponseEntity.status(401).body("Truy cập trái phép.");
         }
@@ -160,7 +160,15 @@ public class ApplicationService {
         interView.setRoom(job.getEmployer().getId()+applicant.getId());
         interView.setInterviewDate(interview);
         interviewRepository.save(interView);
-        mailService.sendInterviewInvitation(applicant.getUser().getEmail(),applicant.getUser().getFullName(), job.getTitle(),interview.getHour()+":"+interview.getMinute()+","+interview.getDayOfMonth()+"/"+interview.getMonth()+"/"+interview.getYear(),"https://job-fs.me/interview/"+job.getEmployer().getId()+applicant.getId());
+        try {
+            mailService.sendInterviewInvitation(applicant.getUser().getEmail(),applicant.getUser().getFullName(), job.getTitle(),interview.getHour()+":"+interview.getMinute()+","+interview.getDayOfMonth()+"/"+interview.getMonth()+"/"+interview.getYear(),"https://job-fs.me/interview/"+job.getEmployer().getId()+applicant.getId());
+        } catch (Exception e) {
+            Map<String,Object> map = new HashMap<>();
+            map.put("error", "Mail send failed");
+            map.put("error_message", e.getMessage());
+            map.put("message", "Hệ thống gặp sự cố khi gửi email xác nhận. Vui lòng thử lại sau.");
+            return new ResponseEntity<>(map, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
         return ResponseEntity.ok("Đã phê duyệt đơn ứng tuyển thành công.");
     }
     public ResponseEntity<?> accept(String token, String jobId, String applicantId) {
