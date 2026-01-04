@@ -49,6 +49,7 @@ public class ApplicationService {
     private TokenService tokenService;
     @Autowired
     private S3Service s3Service;
+    @Autowired
     private InterviewRepository interviewRepository;
     @Autowired
     private MailService mailService;
