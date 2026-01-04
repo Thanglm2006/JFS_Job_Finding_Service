@@ -305,7 +305,7 @@ public class ApplicationService {
         }
 
         if (employer.getStatus() != VerificationStatus.VERIFIED) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Tài khoản của bạn chưa sẵn sàng (Pending/Rejected/Banned)."));
+            return ResponseEntity.badRequest().body(Map.of("message", "Tài khoản của bạn chưa sẵn sàng."));
         }
         List<JobPost> posts = jobPostRepository.findByEmployer(employer);
         List<Map<String, Object>> applications= new ArrayList<>();
@@ -322,37 +322,12 @@ public class ApplicationService {
                 application.put("position",app.getPosition());
                 application.put("avatarUrl", app.getApplicant().getUser().getAvatarUrl());
                 application.put("interviewDate",app.getInterviewDate());
+                application.put("room", interviewRepository.findByEmployerAndApplicant(employer,app.getApplicant()).getRoom());
                 applications.add(application);
             }
         }
         return ResponseEntity.ok(Map.of("applications", applications));
 
     }
-    public ResponseEntity<?> getEmployerInterviews(String token) {
-        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(401).body(Map.of("message", "Truy cập trái phép."));
-        }
-        if (!jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body(Map.of("message", "Bạn không có quyền truy cập thông tin này."));
-        }
 
-        Employer employer = jwtUtil.getEmployer(token);
-        List<InterView> interviews = interviewRepository.findByEmployer(employer);
-
-        List<Map<String, Object>> responseList = interviews.stream()
-                .sorted(Comparator.comparing(InterView::getInterviewDate).reversed())
-                .map(interview -> {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("interviewId", interview.getId());
-                    map.put("applicantId", interview.getApplicant().getId());
-                    map.put("applicantName", interview.getApplicant().getUser().getFullName());
-                    map.put("applicantAvatar", interview.getApplicant().getUser().getAvatarUrl());
-                    map.put("interviewDate", interview.getInterviewDate());
-                    map.put("room", interview.getRoom());
-                    return map;
-                })
-                .toList();
-
-        return ResponseEntity.ok(Map.of("interviews", responseList));
-    }
 }
