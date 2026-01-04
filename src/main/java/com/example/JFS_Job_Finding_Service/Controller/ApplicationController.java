@@ -63,7 +63,7 @@ public class ApplicationController {
             return ResponseEntity.status(500).body("Error unapplying for post: " + e.getMessage());
         }
     }
-    @PostMapping("/getReviewedApplicants")
+    @GetMapping("/getReviewedApplicants")
     public ResponseEntity<?> getReviewedApplicants(@RequestHeader HttpHeaders headers) {
         return applicationService.getReviewedApplications(headers.getFirst("token"));
     }
