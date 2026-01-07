@@ -33,6 +33,10 @@ public class Schedule {
     @Column(name="day", nullable = false)
     private String day;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shift_id", nullable = false)
+    private JobShift jobShift;
+
     @Column(name="description", nullable = false)
     private String description;
 
