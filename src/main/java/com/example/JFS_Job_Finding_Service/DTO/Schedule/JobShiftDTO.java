@@ -14,6 +14,7 @@ public class JobShiftDTO {
     private String day;
     private int startTime;
     private int endTime;
+    private String positionName;
     private int currentQuantity;
     private int maxQuantity;
     private String description;

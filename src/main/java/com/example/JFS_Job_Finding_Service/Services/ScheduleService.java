@@ -230,6 +230,7 @@ public class ScheduleService {
                 .map(s -> JobShiftDTO.builder()
                         .id(s.getId())
                         .day(s.getDay())
+                        .positionName(s.getPositionName())
                         .startTime(s.getStartTime())
                         .endTime(s.getEndTime())
                         .maxQuantity(s.getMaxQuantity())
