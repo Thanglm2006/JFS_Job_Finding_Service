@@ -675,6 +675,42 @@ public class UserService {
         Employer employer = employerRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ nhà tuyển dụng."));
 
+        Map<String, String> errors = new HashMap<>();
+
+        if (dto.getCompanyWebsite() != null && !dto.getCompanyWebsite().isEmpty()) {
+            if (!dto.getCompanyWebsite().matches("^(https?://)?[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/.*)?$")) {
+                errors.put("companyWebsite", "Website không đúng định dạng (phải có http:// hoặc https://).");
+            }
+        }
+
+        if (dto.getCompanyEmail() != null && !dto.getCompanyEmail().isEmpty()) {
+            if (!dto.getCompanyEmail().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                errors.put("companyEmail", "Email công ty không hợp lệ.");
+            }
+        }
+
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isEmpty()) {
+            if (!dto.getPhoneNumber().matches("^(0|\\+84)[3|5|7|8|9][0-9]{8}$")) {
+                errors.put("phoneNumber", "Số điện thoại không đúng định dạng Việt Nam.");
+            }
+        }
+
+        if (dto.getTaxCode() != null && !dto.getTaxCode().isEmpty()) {
+            if (!dto.getTaxCode().matches("^[0-9]{10}(-[0-9]{3})?$")) {
+                errors.put("taxCode", "Mã số thuế phải là 10 hoặc 13 chữ số.");
+            }
+        }
+
+        if (dto.getIdCardNumber() != null && !dto.getIdCardNumber().isEmpty()) {
+            if (!dto.getIdCardNumber().matches("^[0-9]{9,12}$")) {
+                errors.put("idCardNumber", "Số CMND/CCCD phải từ 9 đến 12 chữ số.");
+            }
+        }
+
+        if (!errors.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("errors", errors));
+        }
+
         try {
             if (dto.getBusinessLicense() != null && !dto.getBusinessLicense().isEmpty()) {
                 String licenseUrl = s3Service.uploadFile(dto.getBusinessLicense());
@@ -714,16 +750,14 @@ public class UserService {
             userRepository.save(user);
             employerRepository.save(employer);
 
-            return ResponseEntity.ok(Map.of("status", "success", "message", "Hồ sơ doanh nghiệp đã được cập nhật thành công.", "employer", employer));
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Hồ sơ đã được cập nhật.", "employer", employer));
 
         } catch (IOException e) {
             log.error("S3 Upload error", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Gặp sự cố khi lưu trữ tài liệu lên hệ thống Cloud."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Lỗi tải tệp lên hệ thống Cloud."));
         } catch (Exception e) {
             log.error("Update failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Đã xảy ra lỗi: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Lỗi: " + e.getMessage()));
         }
     }
 
