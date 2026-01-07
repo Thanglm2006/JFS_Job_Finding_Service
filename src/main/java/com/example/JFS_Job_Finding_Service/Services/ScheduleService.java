@@ -206,7 +206,7 @@ public class ScheduleService {
             return ResponseEntity.status(403).body("Đơn ứng tuyển không hợp lệ.");
         }
 
-        if (request.getShiftIds() == null || request.getShiftIds().size() <= 3) {
+        if (request.getShiftIds() == null || request.getShiftIds().size() < 3) {
             return ResponseEntity.badRequest().body("Bạn phải đăng ký nhiều hơn 3 ca làm việc.");
         }
 
