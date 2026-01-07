@@ -170,11 +170,10 @@ public class PostService {
     // --- Main Methods ---
 
     public ResponseEntity<?> getSomePosts(String token, int page, int size) {
-        Applicant applicant;
-        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-           applicant=null;
+        Applicant applicant = null;
+        if (token != null && !token.isEmpty() && tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+            applicant = jwtUtil.getApplicant(token);
         }
-        applicant = jwtUtil.getApplicant(token);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<JobPost> jobPostsPage = jobPostRepository.findAll(pageable);
@@ -195,12 +194,10 @@ public class PostService {
     }
 
     public ResponseEntity<?> fullTextSearchPosts(String token, JobSearchRequest searchDTO) {
-        Applicant applicant;
-        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token)) {
-            applicant=null;
-        }
-        else
+        Applicant applicant = null;
+        if (token != null && !token.isEmpty() && tokenService.validateToken(token)) {
             applicant = jwtUtil.getApplicant(token);
+        }
 
         if (searchDTO.getType() != null && searchDTO.getType().isEmpty()) searchDTO.setType(null);
 
@@ -219,12 +216,13 @@ public class PostService {
 
         return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
     }
+
     public ResponseEntity<?> findByEmployerName(String token, String name, int page, int limit) {
-        Applicant applicant;
-        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token)) {
-            applicant=null;
+        Applicant applicant = null;
+        if (token != null && !token.isEmpty() && tokenService.validateToken(token)) {
+            applicant = jwtUtil.getApplicant(token);
         }
-        applicant = jwtUtil.getApplicant(token);
+
         if (applicant == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Not an applicant"));
         }
@@ -237,12 +235,13 @@ public class PostService {
                 .toList();
         return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
     }
+
     public ResponseEntity<?> findByOrgName(String token, String name, int page, int limit) {
-        Applicant applicant;
-        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token)) {
-            applicant=null;
+        Applicant applicant = null;
+        if (token != null && !token.isEmpty() && tokenService.validateToken(token)) {
+            applicant = jwtUtil.getApplicant(token);
         }
-        applicant = jwtUtil.getApplicant(token);
+
         if (applicant == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail", "message", "Not an applicant"));
         }
@@ -256,36 +255,11 @@ public class PostService {
         return ResponseEntity.ok(Map.of("status", "success", "posts", posts, "totalResults", posts.size()));
     }
 
-    public ResponseEntity<?> getSomePostOfEmployer(String token, int page, int size) {
-        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail"));
-        }
-        Employer employer = jwtUtil.getEmployer(token);
-        if (employer == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail"));
-        }
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<JobPost> jobPostsPage = jobPostRepository.findByEmployer(employer, pageable);
-
-        List<JobPostSummaryDTOForEmployer> posts = jobPostsPage.getContent().stream()
-                .map(post -> mapToPostReturnEmployer(post, null))
-                .toList();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("posts", posts);
-        response.put("totalPages", jobPostsPage.getTotalPages());
-        response.put("currentPage", jobPostsPage.getNumber());
-        return ResponseEntity.ok(response);
-    }
-
     public ResponseEntity<?> getJobPostDetail(String token, String postId) {
-        Applicant applicant;
-        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token)) {
-            applicant=null;
+        Applicant applicant = null;
+        if (token != null && !token.isEmpty() && tokenService.validateToken(token)) {
+            applicant = jwtUtil.getApplicant(token);
         }
-        applicant = jwtUtil.getApplicant(token);
 
         JobPost jobPost = jobPostRepository.findById(postId).orElse(null);
         if (jobPost == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", "fail"));
@@ -335,6 +309,32 @@ public class PostService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", "error", "message", e.getMessage()));
         }
     }
+
+    public ResponseEntity<?> getSomePostOfEmployer(String token, int page, int size) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "fail"));
+        }
+        Employer employer = jwtUtil.getEmployer(token);
+        if (employer == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", "fail"));
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<JobPost> jobPostsPage = jobPostRepository.findByEmployer(employer, pageable);
+
+        List<JobPostSummaryDTOForEmployer> posts = jobPostsPage.getContent().stream()
+                .map(post -> mapToPostReturnEmployer(post, null))
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("posts", posts);
+        response.put("totalPages", jobPostsPage.getTotalPages());
+        response.put("currentPage", jobPostsPage.getNumber());
+        return ResponseEntity.ok(response);
+    }
+
+
 
     public ResponseEntity<?> updatePost(String token, String postId, PostingRequest request) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
