@@ -321,7 +321,7 @@ public class ScheduleService {
         List<ShiftApplication> applications = selectedShifts.stream()
                 .map(shift -> {
                     if (shiftApplicationRepository.existsByJobShiftAndApplicant(shift, applicant)) {
-                        throw new RuntimeException("Bạn đã đăng ký ca này rồi: ID " + shift.getId());
+                        ResponseEntity.badRequest().body("Bạn đã đăng ký ca này rồi: ID " + shift.getId());
                     }
                     return ShiftApplication.builder()
                             .jobShift(shift)
