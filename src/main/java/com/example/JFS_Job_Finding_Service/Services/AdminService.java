@@ -109,7 +109,7 @@ public class AdminService {
                     userOutAdmin.setEmployerId(employerRepository.findByUser(user).get().getId());
                 }
                 else if(applicantRepository.findByUser(user).isPresent()){
-                    userOutAdmin.setEmployerId(applicantRepository.findByUser(user).get().getId());
+                    userOutAdmin.setApplicantId(applicantRepository.findByUser(user).get().getId());
                 }
                 userOutAdmin.setAvatarUrl(user.getAvatarUrl());
                 userOutAdmin.setActive(user.isActive());
