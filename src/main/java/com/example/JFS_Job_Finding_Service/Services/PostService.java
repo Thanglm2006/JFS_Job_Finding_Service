@@ -199,7 +199,8 @@ public class PostService {
         if (!tokenService.validateToken(token)) {
             applicant=null;
         }
-        applicant = jwtUtil.getApplicant(token);
+        else
+            applicant = jwtUtil.getApplicant(token);
 
         if (searchDTO.getType() != null && searchDTO.getType().isEmpty()) searchDTO.setType(null);
 

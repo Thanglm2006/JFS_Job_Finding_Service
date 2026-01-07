@@ -331,11 +331,20 @@ public class UserService {
                                                           String name, LocalDate dob, String gender) {
         Map<String, Object> response = new HashMap<>();
 
+        String passwordPattern = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$";
+
+        if (pass == null || !pass.matches(passwordPattern)) {
+            response.put("error", "Weak password");
+            response.put("message", "Mật khẩu phải ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
         if (!pass.equals(confirmPass)) {
             response.put("error", "Password mismatch");
             response.put("message", "Mật khẩu xác nhận không trùng khớp.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
+
 
         if (userRepository.findByEmail(email).isPresent()) {
             response.put("error", "Duplicate email");
@@ -350,8 +359,7 @@ public class UserService {
         }
 
         if (dob != null) {
-            LocalDate birthDate = dob;
-            int age = Period.between(birthDate, LocalDate.now()).getYears();
+            int age = Period.between(dob, LocalDate.now()).getYears();
             if (age < 15) {
                 response.put("error", "Age violation");
                 response.put("message", "Bạn phải từ đủ 15 tuổi trở lên để có thể đăng ký tài khoản.");
