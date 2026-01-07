@@ -1,11 +1,10 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
+import com.example.JFS_Job_Finding_Service.DTO.UserOutAdmin;
 import com.example.JFS_Job_Finding_Service.models.Admin;
 import com.example.JFS_Job_Finding_Service.models.Notification; // Import
 import com.example.JFS_Job_Finding_Service.models.User;
-import com.example.JFS_Job_Finding_Service.repository.AdminRepository;
-import com.example.JFS_Job_Finding_Service.repository.NotificationRepository; // Import
-import com.example.JFS_Job_Finding_Service.repository.UserRepository;
+import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,9 +14,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 import java.time.Instant; // Import
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -29,13 +31,18 @@ public class AdminService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
-    private NotificationRepository notificationRepository; // Đã thêm
+    private NotificationRepository notificationRepository; // Đã thê
     @Autowired
     private JwtUtil jwtUtil;
     @Value("${secretPass}")
     private String secretPass;
     @Autowired
     private TokenService tokenService;
+    @Autowired
+    private RestClient.Builder builder;
+    private EmployerRequestRepository employerRequestRepository;
+    @Autowired
+    private EmployerRepository employerRepository;
 
     public ResponseEntity<Admin> addAdmin(String secretPass,String fullName, String email, String password) {
         if (!this.secretPass.equals(secretPass)) {
@@ -83,8 +90,23 @@ public class AdminService {
         try{
             Pageable pageable = PageRequest.of(page, size);
             Page<User> users = userRepository.findAll(pageable);
+            List<UserOutAdmin> userList = new ArrayList<>();
+            for(User user : users.getContent()){
+                UserOutAdmin userOutAdmin =  new UserOutAdmin();
+                userOutAdmin.setRole(user.getRole());
+                userOutAdmin.setFullName(user.getFullName());
+                if(employerRepository.findByUser(user).isPresent()){
+                    userOutAdmin.setEmployerId(employerRepository.findByUser(user).get().getId());
+                }
+                else if(employerRepository.findByUser(user).isPresent()){
+                    userOutAdmin.setEmployerId(employerRepository.findByUser(user).get().getId());
+                }
+                userOutAdmin.setAvatarUrl(user.getAvatarUrl());
+                userOutAdmin.setActive(user.isActive());
+                userList.add(userOutAdmin);
+            }
             response.put("status", "success");
-            response.put("users", users.getContent());
+            response.put("users", userList);
             response.put("totalPages", users.getTotalPages());
             response.put("totalElements", users.getTotalElements());
             return ResponseEntity.ok(response);
