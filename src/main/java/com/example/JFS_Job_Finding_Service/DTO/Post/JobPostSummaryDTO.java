@@ -14,6 +14,9 @@ public class JobPostSummaryDTO {
     private String employerName;
     private String salary;      // e.g., "1000 - 2000" or "Thương lượng"
     private String orgName;
+    private String address;
+    private String city;
+    private String state;
     private String jobType;
     private Instant createdAt;
     private boolean isSaved;

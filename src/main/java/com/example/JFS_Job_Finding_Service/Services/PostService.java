@@ -122,6 +122,7 @@ public class PostService {
                 .employerId(jobPost.getEmployer().getId())
                 .orgName(jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown")
                 .jobType(String.valueOf(jobPost.getType()))
+                .address(Arrays.toString(jobPost.getAddresses()))
                 .salary(formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()))
                 .createdAt(jobPost.getCreatedAt())
                 .isSaved(isSaved)
