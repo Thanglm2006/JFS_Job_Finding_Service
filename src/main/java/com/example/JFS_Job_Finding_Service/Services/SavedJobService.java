@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -146,13 +147,15 @@ public class SavedJobService {
             postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
             postData.put("employerUserId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
             postData.put("workspacePicture", pics.toArray());
-            postData.put("salaryMin",jobPost.getSalaryMin());
-            postData.put("salaryMax",jobPost.getSalaryMax());
+            postData.put("salary",formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()))
             postData.put("addresses", jobPost.getAddresses());
             return postData;
         }).toList();
         response.put("status", "success");
         response.put("savedJobs", posts);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    private String formatSalary(BigDecimal min, BigDecimal max) {
+        return (min != null && max != null) ? min.toPlainString() + " - " + max.toPlainString() : "Thương lượng";
     }
 }
