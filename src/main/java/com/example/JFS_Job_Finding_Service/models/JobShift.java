@@ -5,38 +5,39 @@ import lombok.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "schedule")
+@Table(name = "job_shift")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Schedule {
+public class JobShift {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "applicant_id", nullable = false)
-    private Applicant applicant;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_id", nullable = false)
     private JobPost job;
 
-    @Column(name="start_time", nullable = false)
-    private int startTime;
+    @Column(name = "position_name", nullable = false)
+    private String positionName;
 
-    @Column(name="end_time", nullable = false)
-    private int endTime;
-
-    @Column(name="day", nullable = false)
+    @Column(nullable = false)
     private String day;
 
-    @Column(name="description", nullable = false)
+    @Column(name = "start_time", nullable = false)
+    private int startTime;
+
+    @Column(name = "end_time", nullable = false)
+    private int endTime;
+
+    @Column(name = "max_quantity", nullable = false)
+    private int maxQuantity;
+
     private String description;
 
-    @Column(name="created_at", nullable = false)
+    @Column(name = "created_at")
     @Builder.Default
     private Instant createdAt = Instant.now();
 }

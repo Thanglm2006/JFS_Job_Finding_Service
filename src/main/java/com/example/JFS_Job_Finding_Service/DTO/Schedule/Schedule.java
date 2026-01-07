@@ -1,4 +1,4 @@
-package com.example.JFS_Job_Finding_Service.DTO;
+package com.example.JFS_Job_Finding_Service.DTO.Schedule;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

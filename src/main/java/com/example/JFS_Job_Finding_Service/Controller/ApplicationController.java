@@ -1,9 +1,8 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
-import com.example.JFS_Job_Finding_Service.DTO.Application.ApplicantRegisterRequest;
 import com.example.JFS_Job_Finding_Service.DTO.Application.ApplicantResponse;
 import com.example.JFS_Job_Finding_Service.DTO.Application.ApplyDTO;
-import com.example.JFS_Job_Finding_Service.DTO.SetScheduleRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Schedule.JobShiftDTO;
 import com.example.JFS_Job_Finding_Service.Services.ApplicationService;
 import com.example.JFS_Job_Finding_Service.Services.EmployeeService;
 import com.example.JFS_Job_Finding_Service.Services.ScheduleService;
@@ -14,9 +13,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/application")
 public class ApplicationController {
+
     @Autowired
     private ApplicationService applicationService;
     @Autowired
@@ -32,6 +34,7 @@ public class ApplicationController {
     ) {
         return applicationService.applyForJob(headers.getFirst("token"), dto);
     }
+
     @PostMapping("/acceptToInterview")
     public ResponseEntity<?> acceptApplication(
             @RequestHeader HttpHeaders headers,
@@ -39,11 +42,14 @@ public class ApplicationController {
     ) throws MessagingException {
         return applicationService.acceptToInterview(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId(), applicantResponse.getInterview());
     }
-    @PostMapping("accept")
-    public ResponseEntity<?> accept( @RequestHeader HttpHeaders headers,
-                                     @RequestBody ApplicantResponse applicantResponse){
+
+    @PostMapping("/accept")
+    public ResponseEntity<?> accept(
+            @RequestHeader HttpHeaders headers,
+            @RequestBody ApplicantResponse applicantResponse) {
         return applicationService.accept(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId());
     }
+
     @PostMapping("/reject")
     public ResponseEntity<?> rejectApplication(
             @RequestHeader HttpHeaders headers,
@@ -51,6 +57,7 @@ public class ApplicationController {
     ) {
         return applicationService.reject(headers.getFirst("token"), applicantResponse.getJobId(), applicantResponse.getApplicantId(), applicantResponse.getReason());
     }
+
     @GetMapping("/unApply")
     @Operation(summary = "unapply for a post, only applicant can do this")
     public ResponseEntity<?> unApply(
@@ -63,23 +70,19 @@ public class ApplicationController {
             return ResponseEntity.status(500).body("Error unapplying for post: " + e.getMessage());
         }
     }
+
     @GetMapping("/getReviewedApplicants")
     public ResponseEntity<?> getReviewedApplicants(@RequestHeader HttpHeaders headers) {
         return applicationService.getReviewedApplications(headers.getFirst("token"));
     }
-    @PostMapping("/setSchedule")
-    public ResponseEntity<?> setSchedule(
-            @RequestHeader HttpHeaders headers,
-            @RequestBody SetScheduleRequest setScheduleRequest
-            ) {
-        return scheduleService.setSchedule(headers.getFirst("token"), setScheduleRequest.getApplicantId(), setScheduleRequest.getJobId(), setScheduleRequest.getSchedules());
-    }
+
     @GetMapping("/getStaffsForEmployer")
     public ResponseEntity<?> getStaffsForEmployer(
             @RequestHeader HttpHeaders headers
     ) {
         return employeeService.getStaffsForEmployer(headers.getFirst("token"));
     }
+
     @GetMapping("/getJobs")
     public ResponseEntity<?> getJobs(
             @RequestHeader HttpHeaders headers,
@@ -88,24 +91,13 @@ public class ApplicationController {
     ) {
         return applicationService.getJobs(headers.getFirst("token"), page, size);
     }
-    @GetMapping("/getSchedulesForApplicant")
-    public ResponseEntity<?> getSchedulesForApplicant(
-            @RequestHeader HttpHeaders headers
-    ) {
-        return scheduleService.getSchedulesForApplicant(headers.getFirst("token"));
-    }
-    @GetMapping("/getSchedulesForEmployer")
-    public ResponseEntity<?> getSchedulesForEmployer(
-            @RequestHeader HttpHeaders headers, @RequestParam("applicantId") String applicantId
-    ) {
-        return scheduleService.getSchedulesForEmployer(headers.getFirst("token"), applicantId);
-    }
+
     @PostMapping("/deleteStaff")
     public ResponseEntity<?> deleteStaff(
             @RequestHeader HttpHeaders headers,
             @RequestBody ApplicantResponse applicantResponse
     ) {
-        return employeeService.deletestaff(headers.getFirst("token"),  applicantResponse.getApplicantId(),applicantResponse.getJobId());
+        return employeeService.deletestaff(headers.getFirst("token"), applicantResponse.getApplicantId(), applicantResponse.getJobId());
     }
 
 }

@@ -2,18 +2,14 @@ package com.example.JFS_Job_Finding_Service.Services;
 
 import com.example.JFS_Job_Finding_Service.DTO.Application.ApplyDTO;
 import com.example.JFS_Job_Finding_Service.models.*;
-import com.example.JFS_Job_Finding_Service.DTO.Schedule;
 import com.example.JFS_Job_Finding_Service.models.Enum.ApplicationStatus;
 import com.example.JFS_Job_Finding_Service.models.Enum.PositionStatus;
 import com.example.JFS_Job_Finding_Service.models.Enum.VerificationStatus;
 import com.example.JFS_Job_Finding_Service.models.POJO.JobPosition;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
-import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.batch.BatchProperties;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

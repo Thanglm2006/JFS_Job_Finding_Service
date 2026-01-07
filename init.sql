@@ -7,6 +7,10 @@ CREATE TYPE employer_type AS ENUM (
     'Startup', 'Event Organizer', 'Construction', 'Transportation',
     'Salon', 'Gym', 'Farm', 'Entertainment', 'E-commerce', 'Individual', 'Other'
 );
+
+CREATE TYPE shift_day AS ENUM ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
+CREATE TYPE application_shift_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+
 CREATE TYPE verification_status AS ENUM ('PENDING', 'VERIFIED', 'REJECTED', 'BANNED');
 CREATE TYPE application_status AS ENUM ('PENDING', 'REVIEWED', 'ACCEPTED', 'REJECTED');
 CREATE TYPE job_type AS ENUM ('PART_TIME', 'FULL_TIME', 'INTERNSHIP');
@@ -133,6 +137,28 @@ CREATE TABLE job_taken (
     taken_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE job_shift (
+    id SERIAL PRIMARY KEY,
+    job_id TEXT NOT NULL REFERENCES job_post(id) ON DELETE CASCADE,
+    position_name TEXT NOT NULL,
+    day shift_day NOT NULL,
+    start_time INT NOT NULL CHECK (start_time >= 0 AND start_time <= 1439),
+    end_time INT NOT NULL CHECK (end_time > start_time AND end_time <= 1439),
+    max_quantity INT NOT NULL DEFAULT 1 CHECK (max_quantity > 0),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT unique_shift_per_position UNIQUE (job_id, position_name, day, start_time, end_time)
+);
+
+CREATE TABLE shift_application (
+    id SERIAL PRIMARY KEY,
+    shift_id INT NOT NULL REFERENCES job_shift(id) ON DELETE CASCADE,
+    applicant_id TEXT NOT NULL REFERENCES applicant(id) ON DELETE CASCADE,
+    status application_shift_status DEFAULT 'PENDING',
+    applied_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP,
+    CONSTRAINT unique_applicant_per_shift UNIQUE (shift_id, applicant_id)
+);
 CREATE TABLE schedule (
     id SERIAL PRIMARY KEY,
     applicant_id TEXT NOT NULL REFERENCES applicant(id) ON DELETE CASCADE,

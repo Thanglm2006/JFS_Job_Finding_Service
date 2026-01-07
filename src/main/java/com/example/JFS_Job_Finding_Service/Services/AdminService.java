@@ -1,11 +1,12 @@
 package com.example.JFS_Job_Finding_Service.Services;
 
-import com.example.JFS_Job_Finding_Service.DTO.UserOutAdmin;
+import com.example.JFS_Job_Finding_Service.DTO.Schedule.UserOutAdmin;
 import com.example.JFS_Job_Finding_Service.models.Admin;
 import com.example.JFS_Job_Finding_Service.models.Notification; // Import
 import com.example.JFS_Job_Finding_Service.models.User;
 import com.example.JFS_Job_Finding_Service.repository.*;
 import com.example.JFS_Job_Finding_Service.ultils.JwtUtil;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -43,6 +44,12 @@ public class AdminService {
     private EmployerRequestRepository employerRequestRepository;
     @Autowired
     private EmployerRepository employerRepository;
+    @Autowired
+    private ApplicationRepository applicationRepository;
+    @Autowired
+    private ApplicantRepository applicantRepository;
+
+    @Transactional
 
     public ResponseEntity<Admin> addAdmin(String secretPass,String fullName, String email, String password) {
         if (!this.secretPass.equals(secretPass)) {
@@ -60,6 +67,7 @@ public class AdminService {
         return ResponseEntity.ok(admin);
 
     }
+    @Transactional
     public ResponseEntity<?> login(String email, String password) {
         Admin admin = adminRepository.findByEmail(email);
         if (admin == null) {
@@ -79,6 +87,7 @@ public class AdminService {
         response.put("role", "Admin");
         return ResponseEntity.ok(response);
     }
+    @Transactional
     public ResponseEntity<?> getAllUsers(String token, int page, int size) {
         boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
@@ -95,10 +104,11 @@ public class AdminService {
                 UserOutAdmin userOutAdmin =  new UserOutAdmin();
                 userOutAdmin.setRole(user.getRole());
                 userOutAdmin.setFullName(user.getFullName());
+                userOutAdmin.setUserId(user.getId());
                 if(employerRepository.findByUser(user).isPresent()){
                     userOutAdmin.setEmployerId(employerRepository.findByUser(user).get().getId());
                 }
-                else if(employerRepository.findByUser(user).isPresent()){
+                else if(applicantRepository.findByUser(user).isPresent()){
                     userOutAdmin.setEmployerId(employerRepository.findByUser(user).get().getId());
                 }
                 userOutAdmin.setAvatarUrl(user.getAvatarUrl());
@@ -118,6 +128,8 @@ public class AdminService {
             return ResponseEntity.status(500).body(response);
         }
     }
+    @Transactional
+
     public ResponseEntity<?> banUser(String token, long userId) {
         boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
@@ -151,6 +163,8 @@ public class AdminService {
         response.put("message", "Đã cấm người dùng thành công.");
         return ResponseEntity.ok(response);
     }
+    @Transactional
+
     public ResponseEntity<?> unbanUser(String token, long userId) {
         boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
@@ -184,6 +198,8 @@ public class AdminService {
         response.put("message", "Đã mở khóa người dùng thành công.");
         return ResponseEntity.ok(response);
     }
+    @Transactional
+
     public ResponseEntity<?> deleteUser(String token, long userId) {
         boolean check = jwtUtil.checkPermission(token, "Admin")&& tokenService.validateToken(token);
         Map<String, Object> response = new HashMap<>();
