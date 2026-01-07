@@ -32,7 +32,7 @@ public class ScheduleService {
 
     public ResponseEntity<?> getPositionAndScheduleFrame(String token) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("Access denied.");
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
         }
 
         Employer employer = jwtUtil.getEmployer(token);
@@ -41,24 +41,30 @@ public class ScheduleService {
 
         try {
             for (JobPost job : jobs) {
+                String jsonPositions = objectMapper.writeValueAsString(job.getPositions());
                 List<PositionParserDTO> positions = objectMapper.readValue(
-                        job.getPositions().toString(),
+                        jsonPositions,
                         new TypeReference<List<PositionParserDTO>>() {}
                 );
 
-                for (PositionParserDTO pos : positions) {
-                    List<JobShift> existingShifts = jobShiftRepository.findByJobId(job.getId())
-                            .stream()
-                            .filter(shift -> shift.getPositionName().equals(pos.getName()))
-                            .collect(Collectors.toList());
+                Set<String> processedPositions = new HashSet<>();
+                List<JobShift> allShifts = jobShiftRepository.findByJobId(job.getId());
 
-                    List<JobShiftDTO> shiftDTOs = existingShifts.stream()
+                for (PositionParserDTO pos : positions) {
+                    if (processedPositions.contains(pos.getName().toLowerCase())) {
+                        continue;
+                    }
+                    processedPositions.add(pos.getName().toLowerCase());
+
+                    List<JobShiftDTO> shiftDTOs = allShifts.stream()
+                            .filter(shift -> shift.getPositionName().equalsIgnoreCase(pos.getName()))
                             .map(s -> JobShiftDTO.builder()
                                     .id(s.getId())
                                     .day(s.getDay())
                                     .startTime(s.getStartTime())
                                     .endTime(s.getEndTime())
                                     .maxQuantity(s.getMaxQuantity())
+                                    .currentQuantity((int) shiftApplicationRepository.countByJobShiftAndStatus(s, ShiftApplication.Status.APPROVED))
                                     .description(s.getDescription())
                                     .build())
                             .collect(Collectors.toList());
@@ -73,47 +79,64 @@ public class ScheduleService {
             }
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error parsing position data: " + e.getMessage());
+            return ResponseEntity.status(500).body("Lỗi khi xử lý dữ liệu vị trí: " + e.getMessage());
         }
     }
 
     @Transactional
     public ResponseEntity<?> updateFrame(String token, SaveFrameRequest request) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
-            return ResponseEntity.status(403).body("Access denied.");
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
         }
 
         JobPost job = jobPostRepository.findById(request.getJobId())
-                .orElseThrow(() -> new RuntimeException("Job not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc."));
 
         if (!job.getEmployer().getId().equals(jwtUtil.getEmployer(token).getId())) {
-            return ResponseEntity.status(403).body("Unauthorized to modify this job.");
+            return ResponseEntity.status(403).body("Bạn không có quyền chỉnh sửa công việc này.");
         }
 
         try {
+            String jsonPositions = objectMapper.writeValueAsString(job.getPositions());
             List<PositionParserDTO> positions = objectMapper.readValue(
-                    job.getPositions().toString(),
+                    jsonPositions,
                     new TypeReference<List<PositionParserDTO>>() {}
             );
-            boolean positionExists = positions.stream().anyMatch(p -> p.getName().equals(request.getPositionName()));
+            boolean positionExists = positions.stream()
+                    .anyMatch(p -> p.getName().equalsIgnoreCase(request.getPositionName()));
             if (!positionExists) {
-                return ResponseEntity.badRequest().body("Position does not exist in this job.");
+                return ResponseEntity.badRequest().body("Vị trí không tồn tại trong bài đăng tuyển dụng này.");
             }
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error validating position.");
+            return ResponseEntity.status(500).body("Lỗi xác thực vị trí.");
         }
 
         for (JobShiftDTO dto : request.getShifts()) {
             if (dto.getStartTime() >= dto.getEndTime()) {
-                return ResponseEntity.badRequest().body("Invalid time range: Start time must be before end time.");
+                return ResponseEntity.badRequest().body("Thời gian không hợp lệ: Giờ bắt đầu phải nhỏ hơn giờ kết thúc.");
+            }
+            if (dto.getMaxQuantity() <= 0) {
+                return ResponseEntity.badRequest().body("Số lượng nhân sự tối đa phải lớn hơn 0.");
             }
         }
 
         List<JobShift> existingShifts = jobShiftRepository.findByJobId(job.getId())
                 .stream()
-                .filter(s -> s.getPositionName().equals(request.getPositionName()))
+                .filter(s -> s.getPositionName().equalsIgnoreCase(request.getPositionName()))
                 .collect(Collectors.toList());
-        jobShiftRepository.deleteAll(existingShifts);
+
+        for (JobShift shift : existingShifts) {
+            long applicationCount = shiftApplicationRepository.countByJobShiftAndStatus(shift, ShiftApplication.Status.PENDING);
+            long approvedCount = shiftApplicationRepository.countByJobShiftAndStatus(shift, ShiftApplication.Status.APPROVED);
+
+            if (applicationCount > 0 || approvedCount > 0) {
+                return ResponseEntity.badRequest().body("Không thể thay đổi khung giờ vì đã có ứng viên đăng ký hoặc được duyệt cho vị trí này.");
+            }
+        }
+
+        if (!existingShifts.isEmpty()) {
+            jobShiftRepository.deleteAll(existingShifts);
+        }
 
         List<JobShift> newShifts = request.getShifts().stream()
                 .map(dto -> JobShift.builder()
@@ -128,41 +151,74 @@ public class ScheduleService {
                 .collect(Collectors.toList());
 
         jobShiftRepository.saveAll(newShifts);
-        return ResponseEntity.ok("Schedule frame updated successfully.");
+        return ResponseEntity.ok("Cập nhật khung lịch làm việc thành công.");
     }
 
     public ResponseEntity<?> getFramesForApplicant(String token, String applicationId) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
-            return ResponseEntity.status(403).body("Access denied.");
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
         }
 
         Application application = applicationsRepository.findById(applicationId)
                 .orElse(null);
 
         if (application == null) {
-            return ResponseEntity.status(404).body("Application not found.");
+            return ResponseEntity.status(404).body("Không tìm thấy đơn ứng tuyển.");
         }
 
         Applicant applicant = jwtUtil.getApplicant(token);
-        return ResponseEntity.status(403).body("Unauthorized access to this application.");
+        if (!application.getApplicant().getId().equals(applicant.getId())) {
+            return ResponseEntity.status(403).body("Bạn không có quyền truy cập đơn ứng tuyển này.");
+        }
 
+        List<JobShift> shifts = jobShiftRepository.findByJobId(application.getJob().getId())
+                .stream()
+                .filter(s -> s.getPositionName().equalsIgnoreCase(application.getPosition()))
+                .collect(Collectors.toList());
+
+        List<JobShiftDTO> response = shifts.stream()
+                .map(s -> JobShiftDTO.builder()
+                        .id(s.getId())
+                        .day(s.getDay())
+                        .startTime(s.getStartTime())
+                        .endTime(s.getEndTime())
+                        .maxQuantity(s.getMaxQuantity())
+                        .currentQuantity((int) shiftApplicationRepository.countByJobShiftAndStatus(s, ShiftApplication.Status.APPROVED))
+                        .description(s.getDescription())
+                        .build())
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
     @Transactional
     public ResponseEntity<?> registerShifts(String token, RegisterShiftsRequest request) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
-            return ResponseEntity.status(403).body("Access denied.");
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
         }
 
         Applicant applicant = jwtUtil.getApplicant(token);
 
-        if (request.getShiftIds().size() <= 3) {
-            return ResponseEntity.badRequest().body("You must register for more than 3 shifts.");
+        Application application = applicationsRepository.findById(request.getApplicationId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn ứng tuyển."));
+
+        if (!application.getApplicant().getId().equals(applicant.getId())) {
+            return ResponseEntity.status(403).body("Đơn ứng tuyển không hợp lệ.");
+        }
+
+        if (request.getShiftIds() == null || request.getShiftIds().size() <= 3) {
+            return ResponseEntity.badRequest().body("Bạn phải đăng ký nhiều hơn 3 ca làm việc.");
         }
 
         List<JobShift> selectedShifts = jobShiftRepository.findAllById(request.getShiftIds());
         if (selectedShifts.size() != request.getShiftIds().size()) {
-            return ResponseEntity.badRequest().body("Some selected shifts do not exist.");
+            return ResponseEntity.badRequest().body("Một số ca làm việc đã chọn không tồn tại.");
+        }
+
+        for (JobShift s : selectedShifts) {
+            if (!s.getPositionName().equalsIgnoreCase(application.getPosition()) || !s.getJob().getId().equals(application.getJob().getId())) {
+                return ResponseEntity.badRequest().body("Ca làm việc không thuộc vị trí hoặc công việc bạn đã ứng tuyển.");
+            }
         }
 
         for (int i = 0; i < selectedShifts.size(); i++) {
@@ -170,7 +226,7 @@ public class ScheduleService {
                 JobShift s1 = selectedShifts.get(i);
                 JobShift s2 = selectedShifts.get(j);
                 if (isOverlapping(s1.getDay(), s1.getStartTime(), s1.getEndTime(), s2.getDay(), s2.getStartTime(), s2.getEndTime())) {
-                    return ResponseEntity.badRequest().body("Conflict within selected shifts: " + s1.getDay() + " and " + s2.getDay());
+                    return ResponseEntity.badRequest().body("Xung đột thời gian giữa các ca đã chọn: " + s1.getDay() + " (" + s1.getStartTime() + "-" + s1.getEndTime() + ")");
                 }
             }
         }
@@ -179,7 +235,7 @@ public class ScheduleService {
         for (JobShift selected : selectedShifts) {
             for (Schedule existing : currentSchedules) {
                 if (isOverlapping(selected.getDay(), selected.getStartTime(), selected.getEndTime(), existing.getDay(), existing.getStartTime(), existing.getEndTime())) {
-                    return ResponseEntity.badRequest().body("Conflict with existing schedule: " + existing.getDay() + " at " + existing.getStartTime() + " - " + existing.getEndTime());
+                    return ResponseEntity.badRequest().body("Trùng lịch với công việc hiện tại: " + existing.getDay() + " (" + existing.getStartTime() + "-" + existing.getEndTime() + ")");
                 }
             }
         }
@@ -187,27 +243,113 @@ public class ScheduleService {
         List<ShiftApplication> applications = selectedShifts.stream()
                 .map(shift -> {
                     if (shiftApplicationRepository.existsByJobShiftAndApplicant(shift, applicant)) {
-                        throw new RuntimeException("Already applied for shift ID: " + shift.getId());
+                        throw new RuntimeException("Bạn đã đăng ký ca này rồi: ID " + shift.getId());
                     }
                     return ShiftApplication.builder()
                             .jobShift(shift)
                             .applicant(applicant)
                             .status(ShiftApplication.Status.PENDING)
+                            .appliedAt(Instant.now())
                             .build();
                 })
                 .collect(Collectors.toList());
 
-        try{
+        try {
             shiftApplicationRepository.saveAll(applications);
-        } catch (Exception e){
-            return ResponseEntity.badRequest().body("Error saving applications, possibly duplicate request.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi khi lưu đăng ký, có thể bạn đã gửi trùng lặp.");
         }
 
-        return ResponseEntity.ok("Shifts registered successfully.");
+        return ResponseEntity.ok("Đăng ký ca làm việc thành công, vui lòng chờ duyệt.");
+    }
+
+    public ResponseEntity<?> getShiftApplicationsForEmployer(String token, String jobId) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
+        }
+
+        JobPost job = jobPostRepository.findById(jobId).orElse(null);
+        if (job == null || !job.getEmployer().getId().equals(jwtUtil.getEmployer(token).getId())) {
+            return ResponseEntity.status(403).body("Không tìm thấy công việc hoặc không có quyền.");
+        }
+
+        List<JobShift> jobShifts = jobShiftRepository.findByJobId(jobId);
+        List<ShiftApplication> applications = new ArrayList<>();
+        for (JobShift shift : jobShifts) {
+            applications.addAll(shiftApplicationRepository.findByJobShift(shift));
+        }
+
+        List<ShiftApplicationResponse> response = applications.stream()
+                .map(app -> ShiftApplicationResponse.builder()
+                        .id(app.getId())
+                        .applicantName(app.getApplicant().getUser().getFullName())
+                        .applicantId(app.getApplicant().getId())
+                        .positionName(app.getJobShift().getPositionName())
+                        .day(app.getJobShift().getDay())
+                        .startTime(app.getJobShift().getStartTime())
+                        .endTime(app.getJobShift().getEndTime())
+                        .status(app.getStatus().toString())
+                        .appliedAt(app.getAppliedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Transactional
+    public ResponseEntity<?> reviewShiftApplication(String token, ReviewShiftRequest request) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
+        }
+
+        ShiftApplication app = shiftApplicationRepository.findById(request.getShiftApplicationId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu đăng ký ca."));
+
+        if (!app.getJobShift().getJob().getEmployer().getId().equals(jwtUtil.getEmployer(token).getId())) {
+            return ResponseEntity.status(403).body("Bạn không có quyền xử lý yêu cầu này.");
+        }
+
+        if (request.isApproved()) {
+            long currentApproved = shiftApplicationRepository.countByJobShiftAndStatus(app.getJobShift(), ShiftApplication.Status.APPROVED);
+            if (currentApproved >= app.getJobShift().getMaxQuantity()) {
+                return ResponseEntity.badRequest().body("Ca làm việc này đã đủ số lượng nhân sự.");
+            }
+            app.setStatus(ShiftApplication.Status.APPROVED);
+
+            Schedule schedule = Schedule.builder()
+                    .applicant(app.getApplicant())
+                    .job(app.getJobShift().getJob())
+                    .day(app.getJobShift().getDay())
+                    .startTime(app.getJobShift().getStartTime())
+                    .endTime(app.getJobShift().getEndTime())
+                    .description("Vị trí: " + app.getJobShift().getPositionName() + ". " +
+                            (app.getJobShift().getDescription() != null ? app.getJobShift().getDescription() : ""))
+                    .build();
+            scheduleRepository.save(schedule);
+
+            sendNotification(app.getApplicant().getUser(), "Đăng ký ca làm việc của bạn (" + app.getJobShift().getDay() + ") đã được chấp nhận.");
+        } else {
+            app.setStatus(ShiftApplication.Status.REJECTED);
+            sendNotification(app.getApplicant().getUser(), "Đăng ký ca làm việc của bạn (" + app.getJobShift().getDay() + ") đã bị từ chối.");
+        }
+
+        app.setUpdatedAt(Instant.now());
+        shiftApplicationRepository.save(app);
+
+        return ResponseEntity.ok(request.isApproved() ? "Đã duyệt ca làm việc." : "Đã từ chối ca làm việc.");
     }
 
     private boolean isOverlapping(String day1, int start1, int end1, String day2, int start2, int end2) {
         if (!day1.equals(day2)) return false;
         return Math.max(start1, start2) < Math.min(end1, end2);
+    }
+
+    private void sendNotification(User user, String message) {
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setMessage(message);
+        notification.setRead(false);
+        notification.setCreatedAt(Instant.now());
+        notificationRepository.save(notification);
     }
 }

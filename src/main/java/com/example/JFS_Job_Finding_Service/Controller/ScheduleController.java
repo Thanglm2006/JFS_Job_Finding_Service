@@ -1,10 +1,10 @@
 package com.example.JFS_Job_Finding_Service.Controller;
 
 import com.example.JFS_Job_Finding_Service.DTO.Schedule.RegisterShiftsRequest;
+import com.example.JFS_Job_Finding_Service.DTO.Schedule.ReviewShiftRequest;
 import com.example.JFS_Job_Finding_Service.DTO.Schedule.SaveFrameRequest;
 import com.example.JFS_Job_Finding_Service.Services.ScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,34 +15,50 @@ public class ScheduleController {
     @Autowired
     private ScheduleService scheduleService;
 
+
     @GetMapping("/employer/frames")
-    public ResponseEntity<?> getPositionAndScheduleFrame(
-            @RequestHeader HttpHeaders headers
-    ) {
-        return scheduleService.getPositionAndScheduleFrame(headers.getFirst("token"));
+    public ResponseEntity<?> getPositionAndScheduleFrame(@RequestHeader("token") String token) {
+        return scheduleService.getPositionAndScheduleFrame(token);
     }
 
     @PostMapping("/employer/updateFrame")
     public ResponseEntity<?> updateFrame(
-            @RequestHeader HttpHeaders headers,
+            @RequestHeader("token") String token,
             @RequestBody SaveFrameRequest request
     ) {
-        return scheduleService.updateFrame(headers.getFirst("token"), request);
+        return scheduleService.updateFrame(token, request);
     }
+
+    @GetMapping("/employer/shift-applications")
+    public ResponseEntity<?> getShiftApplications(
+            @RequestHeader("token") String token,
+            @RequestParam String jobId
+    ) {
+        return scheduleService.getShiftApplicationsForEmployer(token, jobId);
+    }
+
+    @PostMapping("/employer/review-shift")
+    public ResponseEntity<?> reviewShiftApplication(
+            @RequestHeader("token") String token,
+            @RequestBody ReviewShiftRequest request
+    ) {
+        return scheduleService.reviewShiftApplication(token, request);
+    }
+
 
     @GetMapping("/applicant/frames")
     public ResponseEntity<?> getFramesForApplicant(
-            @RequestHeader HttpHeaders headers,
+            @RequestHeader("token") String token,
             @RequestParam String applicationId
     ) {
-        return scheduleService.getFramesForApplicant(headers.getFirst("token"), applicationId);
+        return scheduleService.getFramesForApplicant(token, applicationId);
     }
 
     @PostMapping("/applicant/registerShifts")
     public ResponseEntity<?> registerShifts(
-            @RequestHeader HttpHeaders headers,
+            @RequestHeader("token") String token,
             @RequestBody RegisterShiftsRequest request
     ) {
-        return scheduleService.registerShifts(headers.getFirst("token"), request);
+        return scheduleService.registerShifts(token, request);
     }
 }

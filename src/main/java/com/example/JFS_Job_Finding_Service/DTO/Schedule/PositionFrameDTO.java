@@ -14,4 +14,5 @@ public class PositionFrameDTO {
     private String jobTitle;
     private String positionName;
     private List<JobShiftDTO> shifts;
+
 }
