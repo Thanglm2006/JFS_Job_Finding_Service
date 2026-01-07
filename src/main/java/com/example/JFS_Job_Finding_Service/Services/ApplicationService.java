@@ -315,6 +315,7 @@ public class ApplicationService {
                 application.put("cv", app.getCv());
                 application.put("applicantId", app.getApplicant().getId());
                 application.put("userId", app.getApplicant().getUser().getId());
+                application.put("jobId", app.getJob().getId());
                 application.put("position",app.getPosition());
                 application.put("avatarUrl", app.getApplicant().getUser().getAvatarUrl());
                 application.put("interviewDate",app.getInterviewDate());
