@@ -146,6 +146,9 @@ public class SavedJobService {
             postData.put("employerId", jobPost.getEmployer() != null ? jobPost.getEmployer().getId() : null);
             postData.put("employerUserId", jobPost.getEmployer() != null ? jobPost.getEmployer().getUser().getId() : null);
             postData.put("workspacePicture", pics.toArray());
+            postData.put("salaryMin",jobPost.getSalaryMin());
+            postData.put("salaryMax",jobPost.getSalaryMax());
+            postData.put("address", jobPost.getAddresses());
             return postData;
         }).toList();
         response.put("status", "success");
