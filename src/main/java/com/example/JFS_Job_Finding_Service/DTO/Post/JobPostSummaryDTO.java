@@ -11,6 +11,7 @@ public class JobPostSummaryDTO {
     private String title;
     private String employerId;
     private long employerUserId;
+    private String avatarUrl;
     private String employerName;
     private String salary;      // e.g., "1000 - 2000" or "Thương lượng"
     private String orgName;

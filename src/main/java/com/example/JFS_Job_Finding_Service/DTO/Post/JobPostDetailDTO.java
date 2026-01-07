@@ -32,7 +32,7 @@ public class JobPostDetailDTO {
     private BigDecimal salaryMin;
     private BigDecimal salaryMax;
     private String salaryString; // Formatted string
-
+    private String avatarUrl;
     private List<String> workspacePictures;
     private Instant createdAt;
 

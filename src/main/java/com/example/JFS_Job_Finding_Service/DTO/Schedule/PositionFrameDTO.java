@@ -13,6 +13,7 @@ public class PositionFrameDTO {
     private String jobId;
     private String jobTitle;
     private String positionName;
+    private String avatarUrl;
     private List<JobShiftDTO> shifts;
 
 }

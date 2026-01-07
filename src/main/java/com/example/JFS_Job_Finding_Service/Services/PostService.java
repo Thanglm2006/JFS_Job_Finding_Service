@@ -120,6 +120,7 @@ public class PostService {
                 .employerName(jobPost.getEmployer().getUser().getFullName())
                 .employerUserId(jobPost.getEmployer().getUser().getId())
                 .employerId(jobPost.getEmployer().getId())
+                .avatarUrl(jobPost.getEmployer().getUser().getAvatarUrl())
                 .orgName(jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown")
                 .jobType(String.valueOf(jobPost.getType()))
                 .address(Arrays.toString(jobPost.getAddresses()))
@@ -129,6 +130,7 @@ public class PostService {
                 .isApplied(isApplied)
                 .build();
     }
+
     private JobPostSummaryDTOForEmployer mapToPostReturnEmployer(JobPost jobPost, Applicant applicant) {
         boolean isSaved = false;
         boolean isApplied = false;
@@ -157,6 +159,7 @@ public class PostService {
                 .employerName(jobPost.getEmployer().getUser().getFullName())
                 .employerUserId(jobPost.getEmployer().getUser().getId())
                 .employerId(jobPost.getEmployer().getId())
+                .avatarUrl(jobPost.getEmployer().getUser().getAvatarUrl())
                 .orgName(jobPost.getEmployer() != null ? jobPost.getEmployer().getOrgName() : "Unknown")
                 .jobType(String.valueOf(jobPost.getType()))
                 .salary(formatSalary(jobPost.getSalaryMin(), jobPost.getSalaryMax()))
@@ -292,6 +295,7 @@ public class PostService {
                     .employerUserId(jobPost.getEmployer().getUser().getId())
                     .employerName(jobPost.getEmployer().getUser().getFullName())
                     .isSaved(isSaved)
+                    .avatarUrl(jobPost.getEmployer().getUser().getAvatarUrl())
                     .isApplied(isApplied)
                     .createdAt(jobPost.getCreatedAt())
                     .description(jobPost.getJobDescription())

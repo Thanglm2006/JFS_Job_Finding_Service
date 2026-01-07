@@ -29,7 +29,7 @@ public class ScheduleService {
     @Autowired private TokenService tokenService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-
+    @Transactional
     public ResponseEntity<?> getPositionAndScheduleFrame(String token) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");
@@ -73,6 +73,7 @@ public class ScheduleService {
                             .jobId(job.getId())
                             .jobTitle(job.getTitle())
                             .positionName(pos.getName())
+                            .avatarUrl(job.getEmployer().getUser().getAvatarUrl())
                             .shifts(shiftDTOs)
                             .build());
                 }
@@ -153,7 +154,7 @@ public class ScheduleService {
         jobShiftRepository.saveAll(newShifts);
         return ResponseEntity.ok("Cập nhật khung lịch làm việc thành công.");
     }
-
+    @Transactional
     public ResponseEntity<?> getFramesForApplicant(String token, String applicationId) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");
@@ -263,7 +264,7 @@ public class ScheduleService {
         return ResponseEntity.ok("Đăng ký ca làm việc thành công, vui lòng chờ duyệt.");
     }
 
-
+    @Transactional
     public ResponseEntity<?> getApplicantApprovedSchedules(String token) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");
@@ -288,6 +289,7 @@ public class ScheduleService {
         return ResponseEntity.ok(response);
     }
 
+    @Transactional
     public ResponseEntity<?> getShiftApplicationsForEmployer(String token, String jobId, String positionName) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");

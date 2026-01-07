@@ -18,6 +18,7 @@ public class JobPostSummaryDTOForEmployer {
     private String orgName;
     private String jobType;
     private Instant createdAt;
+    private String avatarUrl;
     private boolean isSaved;
     private boolean isApplied;
     private List<Map<String, Object>> applicants;
