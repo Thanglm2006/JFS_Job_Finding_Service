@@ -171,7 +171,7 @@ public class PostService {
 
     public ResponseEntity<?> getSomePosts(String token, int page, int size) {
         Applicant applicant;
-        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
+        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token, jwtUtil.extractEmail(token))) {
            applicant=null;
         }
         applicant = jwtUtil.getApplicant(token);
@@ -196,7 +196,7 @@ public class PostService {
 
     public ResponseEntity<?> fullTextSearchPosts(String token, JobSearchRequest searchDTO) {
         Applicant applicant;
-        if (!tokenService.validateToken(token)) {
+        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token)) {
             applicant=null;
         }
         else
@@ -221,7 +221,7 @@ public class PostService {
     }
     public ResponseEntity<?> findByEmployerName(String token, String name, int page, int limit) {
         Applicant applicant;
-        if (!tokenService.validateToken(token)) {
+        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token)) {
             applicant=null;
         }
         applicant = jwtUtil.getApplicant(token);
@@ -239,7 +239,7 @@ public class PostService {
     }
     public ResponseEntity<?> findByOrgName(String token, String name, int page, int limit) {
         Applicant applicant;
-        if (!tokenService.validateToken(token)) {
+        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token)) {
             applicant=null;
         }
         applicant = jwtUtil.getApplicant(token);
@@ -282,7 +282,7 @@ public class PostService {
 
     public ResponseEntity<?> getJobPostDetail(String token, String postId) {
         Applicant applicant;
-        if (!tokenService.validateToken(token)) {
+        if (token!=null&&!token.isEmpty()&&!tokenService.validateToken(token)) {
             applicant=null;
         }
         applicant = jwtUtil.getApplicant(token);
