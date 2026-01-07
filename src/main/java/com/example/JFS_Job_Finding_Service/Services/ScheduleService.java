@@ -71,6 +71,7 @@ public class ScheduleService {
 
                     response.add(PositionFrameDTO.builder()
                             .jobId(job.getId())
+                            .avatarUrl(job.getEmployer().getUser().getAvatarUrl())
                             .jobTitle(job.getTitle())
                             .positionName(pos.getName())
                             .shifts(shiftDTOs)
