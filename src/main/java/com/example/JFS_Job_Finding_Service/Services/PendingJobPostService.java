@@ -317,6 +317,7 @@ public class PendingJobPostService {
                 .employerName(p.getEmployer().getUser().getFullName())
                 .employerUserId(p.getEmployer().getUser().getId())
                 .employerId(p.getEmployer().getId())
+                .avatarUrl(p.getEmployer().getUser().getAvatarUrl())
                 .orgName(p.getEmployer() != null ? p.getEmployer().getOrgName() : "Unknown")
                 .jobType(String.valueOf(p.getType()))
                 .salary(formatSalary(p.getSalaryMin(), p.getSalaryMax()))
