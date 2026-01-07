@@ -398,6 +398,7 @@ public class ScheduleService {
                     .job(app.getJobShift().getJob())
                     .day(app.getJobShift().getDay())
                     .startTime(app.getJobShift().getStartTime())
+                    .jobShift(app.getJobShift())
                     .endTime(app.getJobShift().getEndTime())
                     .description("Vị trí: " + app.getJobShift().getPositionName() + ". " +
                             (app.getJobShift().getDescription() != null ? app.getJobShift().getDescription() : ""))

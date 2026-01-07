@@ -163,6 +163,7 @@ CREATE TABLE schedule (
     id SERIAL PRIMARY KEY,
     applicant_id TEXT NOT NULL REFERENCES applicant(id) ON DELETE CASCADE,
     job_id TEXT NOT NULL REFERENCES job_post(id) ON DELETE CASCADE,
+    shift_id INT NOT NULL REFERENCES job_shift(id) ON DELETE CASCADE,
     start_time INT NOT NULL CHECK (start_time >= 0 AND start_time <= 1439),
     end_time INT NOT NULL CHECK (end_time > start_time AND end_time <= 1439),
     day TEXT NOT NULL CHECK (day IN ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')),
