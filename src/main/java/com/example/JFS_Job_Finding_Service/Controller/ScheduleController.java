@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/schedule")
+@CrossOrigin(origins = "*")
 public class ScheduleController {
 
     @Autowired
     private ScheduleService scheduleService;
-
 
     @GetMapping("/employer/frames")
     public ResponseEntity<?> getPositionAndScheduleFrame(@RequestHeader("token") String token) {
@@ -27,13 +27,6 @@ public class ScheduleController {
             @RequestBody SaveFrameRequest request
     ) {
         return scheduleService.updateFrame(token, request);
-    }
-
-    @GetMapping("/applicant/my-schedules")
-    public ResponseEntity<?> getApplicantApprovedSchedules(
-            @RequestHeader("token") String token
-    ) {
-        return scheduleService.getApplicantApprovedSchedules(token);
     }
 
     @GetMapping("/employer/shift-applications")
@@ -53,6 +46,14 @@ public class ScheduleController {
         return scheduleService.reviewShiftApplication(token, request);
     }
 
+    @GetMapping("/employer/staffs-in-shift")
+    public ResponseEntity<?> getStaffsInShift(
+            @RequestHeader("token") String token,
+            @RequestParam String jobId,
+            @RequestParam String positionName
+    ) {
+        return scheduleService.getStaffsInShift(token, jobId, positionName);
+    }
 
     @GetMapping("/applicant/frames")
     public ResponseEntity<?> getFramesForApplicant(
@@ -68,5 +69,12 @@ public class ScheduleController {
             @RequestBody RegisterShiftsRequest request
     ) {
         return scheduleService.registerShifts(token, request);
+    }
+
+    @GetMapping("/applicant/my-schedules")
+    public ResponseEntity<?> getApplicantApprovedSchedules(
+            @RequestHeader("token") String token
+    ) {
+        return scheduleService.getApplicantApprovedSchedules(token);
     }
 }

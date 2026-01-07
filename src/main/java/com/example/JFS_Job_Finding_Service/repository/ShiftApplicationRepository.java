@@ -15,5 +15,7 @@ public interface ShiftApplicationRepository extends JpaRepository<ShiftApplicati
     long countByJobShiftAndStatus(JobShift jobShift, ShiftApplication.Status status);
     List<ShiftApplication> findByApplicantId(String applicantId);
 
-    Collection<? extends ShiftApplication> findByJobShift(JobShift shift);
+    List<ShiftApplication> findByJobShift(JobShift shift);
+
+    List<ShiftApplication> findByJobShiftAndStatus(JobShift shift, ShiftApplication.Status status);
 }

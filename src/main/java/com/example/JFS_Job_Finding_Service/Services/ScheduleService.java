@@ -29,7 +29,7 @@ public class ScheduleService {
     @Autowired private TokenService tokenService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    @Transactional
+
     public ResponseEntity<?> getPositionAndScheduleFrame(String token) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");
@@ -73,7 +73,6 @@ public class ScheduleService {
                             .jobId(job.getId())
                             .jobTitle(job.getTitle())
                             .positionName(pos.getName())
-                            .avatarUrl(job.getEmployer().getUser().getAvatarUrl())
                             .shifts(shiftDTOs)
                             .build());
                 }
@@ -127,12 +126,15 @@ public class ScheduleService {
                 .collect(Collectors.toList());
 
         for (JobShift shift : existingShifts) {
-            long applicationCount = shiftApplicationRepository.countByJobShiftAndStatus(shift, ShiftApplication.Status.PENDING);
-            long approvedCount = shiftApplicationRepository.countByJobShiftAndStatus(shift, ShiftApplication.Status.APPROVED);
+            List<ShiftApplication> relatedApplications = shiftApplicationRepository.findByJobShift(shift);
 
-            if (applicationCount > 0 || approvedCount > 0) {
-                return ResponseEntity.badRequest().body("Không thể thay đổi khung giờ vì đã có ứng viên đăng ký hoặc được duyệt cho vị trí này.");
+            for (ShiftApplication app : relatedApplications) {
+                sendNotification(app.getApplicant().getUser(),
+                        "Ca làm việc " + shift.getDay() + " (" + shift.getStartTime() + "-" + shift.getEndTime() +
+                                ") tại công việc " + job.getTitle() + " đã bị hủy do thay đổi lịch trình từ nhà tuyển dụng.");
             }
+
+            shiftApplicationRepository.deleteAll(relatedApplications);
         }
 
         if (!existingShifts.isEmpty()) {
@@ -152,9 +154,55 @@ public class ScheduleService {
                 .collect(Collectors.toList());
 
         jobShiftRepository.saveAll(newShifts);
-        return ResponseEntity.ok("Cập nhật khung lịch làm việc thành công.");
+        return ResponseEntity.ok("Cập nhật khung lịch làm việc thành công. Các ca cũ và đơn đăng ký liên quan đã được xóa.");
     }
-    @Transactional
+
+    public ResponseEntity<?> getStaffsInShift(String token, String jobId, String positionName) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
+        }
+
+        JobPost job = jobPostRepository.findById(jobId).orElse(null);
+        if (job == null || !job.getEmployer().getId().equals(jwtUtil.getEmployer(token).getId())) {
+            return ResponseEntity.status(403).body("Không tìm thấy công việc hoặc không có quyền.");
+        }
+
+        List<JobShift> shifts = jobShiftRepository.findByJobId(jobId).stream()
+                .filter(s -> s.getPositionName().equalsIgnoreCase(positionName))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (JobShift shift : shifts) {
+            List<ShiftApplication> approvedApps = shiftApplicationRepository.findByJobShiftAndStatus(shift, ShiftApplication.Status.APPROVED);
+
+            List<Map<String, Object>> staffs = approvedApps.stream()
+                    .map(app -> {
+                        Map<String, Object> staffInfo = new HashMap<>();
+                        staffInfo.put("applicantId", app.getApplicant().getId());
+                        staffInfo.put("fullName", app.getApplicant().getUser().getFullName());
+                        staffInfo.put("email", app.getApplicant().getUser().getEmail());
+                        staffInfo.put("phone", app.getApplicant().getUser().getPhone());
+                        staffInfo.put("avatar", app.getApplicant().getUser().getAvatarUrl());
+                        return staffInfo;
+                    })
+                    .collect(Collectors.toList());
+
+            Map<String, Object> shiftData = new HashMap<>();
+            shiftData.put("shiftId", shift.getId());
+            shiftData.put("day", shift.getDay());
+            shiftData.put("startTime", shift.getStartTime());
+            shiftData.put("endTime", shift.getEndTime());
+            shiftData.put("maxQuantity", shift.getMaxQuantity());
+            shiftData.put("currentQuantity", staffs.size());
+            shiftData.put("staffs", staffs);
+
+            response.add(shiftData);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
     public ResponseEntity<?> getFramesForApplicant(String token, String applicationId) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");
@@ -192,6 +240,30 @@ public class ScheduleService {
         return ResponseEntity.ok(response);
     }
 
+    public ResponseEntity<?> getApplicantApprovedSchedules(String token) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
+        }
+
+        Applicant applicant = jwtUtil.getApplicant(token);
+        List<Schedule> schedules = scheduleRepository.findByApplicant(applicant);
+
+        var response = schedules.stream()
+                .map(s -> new HashMap<String, Object>() {{
+                    put("id", s.getId());
+                    put("jobTitle", s.getJob().getTitle());
+                    put("employerName", s.getJob().getEmployer().getOrgName());
+                    put("day", s.getDay());
+                    put("startTime", s.getStartTime());
+                    put("endTime", s.getEndTime());
+                    put("description", s.getDescription());
+                    put("status", "APPROVED");
+                }})
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
     @Transactional
     public ResponseEntity<?> registerShifts(String token, RegisterShiftsRequest request) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
@@ -207,7 +279,7 @@ public class ScheduleService {
             return ResponseEntity.status(403).body("Đơn ứng tuyển không hợp lệ.");
         }
 
-        if (request.getShiftIds() == null || request.getShiftIds().size() < 3) {
+        if (request.getShiftIds() == null || request.getShiftIds().size() <= 3) {
             return ResponseEntity.badRequest().body("Bạn phải đăng ký nhiều hơn 3 ca làm việc.");
         }
 
@@ -264,32 +336,6 @@ public class ScheduleService {
         return ResponseEntity.ok("Đăng ký ca làm việc thành công, vui lòng chờ duyệt.");
     }
 
-    @Transactional
-    public ResponseEntity<?> getApplicantApprovedSchedules(String token) {
-        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
-            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
-        }
-
-        Applicant applicant = jwtUtil.getApplicant(token);
-        List<Schedule> schedules = scheduleRepository.findByApplicant(applicant);
-
-        var response = schedules.stream()
-                .map(s -> new HashMap<String, Object>() {{
-                    put("id", s.getId());
-                    put("jobTitle", s.getJob().getTitle());
-                    put("employerName", s.getJob().getEmployer().getOrgName());
-                    put("day", s.getDay());
-                    put("startTime", s.getStartTime());
-                    put("endTime", s.getEndTime());
-                    put("description", s.getDescription());
-                    put("status", "APPROVED");
-                }})
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(response);
-    }
-
-    @Transactional
     public ResponseEntity<?> getShiftApplicationsForEmployer(String token, String jobId, String positionName) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");
