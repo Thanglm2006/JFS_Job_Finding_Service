@@ -263,7 +263,32 @@ public class ScheduleService {
         return ResponseEntity.ok("Đăng ký ca làm việc thành công, vui lòng chờ duyệt.");
     }
 
-    public ResponseEntity<?> getShiftApplicationsForEmployer(String token, String jobId) {
+
+    public ResponseEntity<?> getApplicantApprovedSchedules(String token) {
+        if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
+            return ResponseEntity.status(403).body("Truy cập bị từ chối.");
+        }
+
+        Applicant applicant = jwtUtil.getApplicant(token);
+        List<Schedule> schedules = scheduleRepository.findByApplicant(applicant);
+
+        var response = schedules.stream()
+                .map(s -> new HashMap<String, Object>() {{
+                    put("id", s.getId());
+                    put("jobTitle", s.getJob().getTitle());
+                    put("employerName", s.getJob().getEmployer().getOrgName());
+                    put("day", s.getDay());
+                    put("startTime", s.getStartTime());
+                    put("endTime", s.getEndTime());
+                    put("description", s.getDescription());
+                    put("status", "APPROVED");
+                }})
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<?> getShiftApplicationsForEmployer(String token, String jobId, String positionName) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");
         }
@@ -273,7 +298,10 @@ public class ScheduleService {
             return ResponseEntity.status(403).body("Không tìm thấy công việc hoặc không có quyền.");
         }
 
-        List<JobShift> jobShifts = jobShiftRepository.findByJobId(jobId);
+        List<JobShift> jobShifts = jobShiftRepository.findByJobId(jobId).stream()
+                .filter(shift -> shift.getPositionName().equalsIgnoreCase(positionName))
+                .collect(Collectors.toList());
+
         List<ShiftApplication> applications = new ArrayList<>();
         for (JobShift shift : jobShifts) {
             applications.addAll(shiftApplicationRepository.findByJobShift(shift));

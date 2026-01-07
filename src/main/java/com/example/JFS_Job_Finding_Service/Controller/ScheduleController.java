@@ -29,12 +29,20 @@ public class ScheduleController {
         return scheduleService.updateFrame(token, request);
     }
 
+    @GetMapping("/applicant/my-schedules")
+    public ResponseEntity<?> getApplicantApprovedSchedules(
+            @RequestHeader("token") String token
+    ) {
+        return scheduleService.getApplicantApprovedSchedules(token);
+    }
+
     @GetMapping("/employer/shift-applications")
     public ResponseEntity<?> getShiftApplications(
             @RequestHeader("token") String token,
-            @RequestParam String jobId
+            @RequestParam String jobId,
+            @RequestParam String positionName
     ) {
-        return scheduleService.getShiftApplicationsForEmployer(token, jobId);
+        return scheduleService.getShiftApplicationsForEmployer(token, jobId, positionName);
     }
 
     @PostMapping("/employer/review-shift")
