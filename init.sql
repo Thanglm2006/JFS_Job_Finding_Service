@@ -337,6 +337,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE INDEX IF NOT EXISTS idx_employer_org_name_pgroonga
+ON employer USING pgroonga (org_name);
+
+CREATE INDEX IF NOT EXISTS idx_users_full_name_pgroonga
+ON users USING pgroonga (full_name);
+
 CREATE OR REPLACE FUNCTION find_jobs_by_org_name(
     p_org_name TEXT,
     p_limit INTEGER DEFAULT 20,
@@ -348,11 +355,11 @@ BEGIN
     SELECT jp.*
     FROM job_post jp
     JOIN employer e ON jp.employer_id = e.id
-    WHERE e.org_name ILIKE '%' || p_org_name || '%'
+    WHERE e.org_name &@~ p_org_name
     ORDER BY jp.created_at DESC
     LIMIT p_limit OFFSET p_offset;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql STABLE;
 
 CREATE OR REPLACE FUNCTION find_jobs_by_employer_name(
     p_employer_name TEXT,
@@ -366,11 +373,11 @@ BEGIN
     FROM job_post jp
     JOIN employer e ON jp.employer_id = e.id
     JOIN users u ON e.user_id = u.id
-    WHERE u.full_name ILIKE '%' || p_employer_name || '%'
+    WHERE u.full_name &@~ p_employer_name
     ORDER BY jp.created_at DESC
     LIMIT p_limit OFFSET p_offset;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql STABLE;
 
 CREATE OR REPLACE FUNCTION get_employer_jobs_by_status(
     p_employer_id TEXT,

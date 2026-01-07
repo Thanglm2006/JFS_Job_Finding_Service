@@ -189,34 +189,35 @@ public class UserService {
         return processPendingRegistration(user, employer, null);
     }
 
-    // Using DTO for review
     public ResponseEntity<?> acceptEmployerRegistration(String token, ReviewEmployerDTO dto) {
         Map<String, Object> response = new HashMap<>();
-        if(!jwtUtil.checkPermission(token,"admin") && !jwtUtil.validateToken(token)){
+        if (!jwtUtil.checkPermission(token, "admin") && !jwtUtil.validateToken(token)) {
             response.put("error", "Invalid access");
             response.put("message", "Bạn không có quyền thực hiện thao tác phê duyệt này.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
-        Employer employer =  employerRepository.findById(dto.getEmployerId()).orElse(null);
-        if(employer == null) {
+
+        Employer employer = employerRepository.findById(dto.getEmployerId()).orElse(null);
+        if (employer == null) {
             response.put("message", "Không tìm thấy thông tin nhà tuyển dụng.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
-        if(employer.getStatus() == VerificationStatus.VERIFIED) {
-            return ResponseEntity.ok().body(Map.of("message","đã phê duyệt người này trước đó rồi!"));
+
+        if (employer.getStatus() == VerificationStatus.VERIFIED) {
+            return ResponseEntity.ok().body(Map.of("message", "đã phê duyệt người này trước đó rồi!"));
         }
+
+        EmployerRequest request = employerRequestRepository.findById(dto.getRequestId()).orElse(null);
+        if (request == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy yêu cầu xét duyệt tương ứng."));
+        }
+
         employer.setStatus(VerificationStatus.VERIFIED);
         employer.setVerifiedAt(LocalDateTime.now());
         employerRepository.save(employer);
 
-        EmployerRequest request = employerRequestRepository.findById(dto.getRequestId()).orElse(null);
-        if (request != null) {
-            request.setStatus(VerificationStatus.VERIFIED);
-            employerRequestRepository.save(request);
-        }
-        else{
-            return ResponseEntity.badRequest().body(Map.of("message","not found request"));
-        }
+        request.setStatus(VerificationStatus.VERIFIED);
+        employerRequestRepository.save(request);
 
         Notification notification = new Notification();
         notification.setUser(employer.getUser());
@@ -228,32 +229,35 @@ public class UserService {
         return ResponseEntity.ok(Map.of("message", "Đã phê duyệt tài khoản nhà tuyển dụng thành công."));
     }
 
-    // Using DTO for rejection
     public ResponseEntity<?> rejectEmployerRegistration(String token, ReviewEmployerDTO dto) {
         Map<String, Object> response = new HashMap<>();
-        if(!jwtUtil.checkPermission(token,"admin") && !jwtUtil.validateToken(token)){
+        if (!jwtUtil.checkPermission(token, "admin") && !jwtUtil.validateToken(token)) {
             response.put("error", "Invalid access");
             response.put("message", "Bạn không có quyền thực hiện thao tác phê duyệt này.");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
-        Employer employer =  employerRepository.findById(dto.getEmployerId()).orElse(null);
-        if(employer == null) {
+
+        Employer employer = employerRepository.findById(dto.getEmployerId()).orElse(null);
+        if (employer == null) {
             response.put("message", "Không tìm thấy thông tin nhà tuyển dụng.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
-        if(employer.getStatus() == VerificationStatus.VERIFIED) {
-            return ResponseEntity.ok().body(Map.of("message","đã phê duyệt người này trước đó rồi!"));
-        }
-        employer.setStatus(VerificationStatus.REJECTED);
 
-        employerRepository.save(employer);
+        if (employer.getStatus() == VerificationStatus.VERIFIED) {
+            return ResponseEntity.ok().body(Map.of("message", "đã phê duyệt người này trước đó rồi!"));
+        }
 
         EmployerRequest request = employerRequestRepository.findById(dto.getRequestId()).orElse(null);
-        if (request != null) {
-            request.setStatus(VerificationStatus.REJECTED);
-            request.setRejectionReason(dto.getReason());
-            employerRequestRepository.delete(request);
+        if (request == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy yêu cầu xét duyệt tương ứng."));
         }
+
+        employer.setStatus(VerificationStatus.REJECTED);
+        employerRepository.save(employer);
+
+        request.setStatus(VerificationStatus.REJECTED);
+        request.setRejectionReason(dto.getReason());
+        employerRequestRepository.save(request);
 
         Notification notification = new Notification();
         notification.setUser(employer.getUser());
