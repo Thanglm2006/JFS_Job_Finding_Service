@@ -157,6 +157,7 @@ public class ScheduleService {
         jobShiftRepository.saveAll(newShifts);
         return ResponseEntity.ok("Cập nhật khung lịch làm việc thành công. Các ca cũ và đơn đăng ký liên quan đã được xóa.");
     }
+    @Transactional
 
     public ResponseEntity<?> getStaffsInShift(String token, String jobId, String positionName) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
@@ -203,6 +204,7 @@ public class ScheduleService {
 
         return ResponseEntity.ok(response);
     }
+    @Transactional
 
     public ResponseEntity<?> getFramesForApplicant(String token, String applicationId) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
@@ -241,6 +243,7 @@ public class ScheduleService {
 
         return ResponseEntity.ok(response);
     }
+    @Transactional
 
     public ResponseEntity<?> getApplicantApprovedSchedules(String token) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsApplicant(token)) {
@@ -337,7 +340,7 @@ public class ScheduleService {
 
         return ResponseEntity.ok("Đăng ký ca làm việc thành công, vui lòng chờ duyệt.");
     }
-
+    @Transactional
     public ResponseEntity<?> getShiftApplicationsForEmployer(String token, String jobId, String positionName) {
         if (!tokenService.validateToken(token, jwtUtil.extractEmail(token)) || !jwtUtil.checkWhetherIsEmployer(token)) {
             return ResponseEntity.status(403).body("Truy cập bị từ chối.");
